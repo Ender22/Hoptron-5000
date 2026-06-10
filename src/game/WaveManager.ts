@@ -51,7 +51,13 @@ export class WaveManager {
 
   /** boss id (from the segment XML) waiting for the Game layer to spawn */
   needsBoss: number | null = null;
+  /** chest level waiting for the Game layer to spawn (original rewardChest) */
+  needsChest: number | null = null;
   private activeBoss: Enemy | null = null;
+
+  chestSpawned(): void {
+    this.needsChest = null;
+  }
 
   private nextSegment(): void {
     this.segmentIndex++;
@@ -70,12 +76,17 @@ export class WaveManager {
         console.log(`[wave] segment ${this.segmentIndex}: BOSS ${this.needsBoss}`);
         return;
       }
+      // reward chest: timed segment, the Game layer spawns the chest visual
+      if (seg.rewardChest !== null) {
+        this.current = seg;
+        this.delayTimer = seg.delay;
+        this.needsChest = seg.rewardChest;
+        console.log(`[wave] segment ${this.segmentIndex}: CHEST level ${seg.rewardChest}`);
+        return;
+      }
       // skip special segments not implemented yet
-      if (seg.shopkeeper || seg.rewardChest || seg.enemies.length === 0) {
-        console.log(`[wave] skipping special segment ${this.segmentIndex}`, {
-          shopkeeper: seg.shopkeeper,
-          chest: seg.rewardChest,
-        });
+      if (seg.shopkeeper || seg.enemies.length === 0) {
+        console.log(`[wave] skipping special segment ${this.segmentIndex}`, { shopkeeper: seg.shopkeeper });
         this.segmentIndex++;
         continue;
       }
@@ -144,7 +155,7 @@ export class WaveManager {
 
     // spawn to keep the arena populated
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0) {
+    if (this.spawnTimer <= 0 && seg.enemies.length > 0) {
       const alive = this.aliveCount;
       const wantMore =
         alive < seg.minEnemies ||

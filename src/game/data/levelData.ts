@@ -74,7 +74,8 @@ export interface Segment {
   enemies: SegmentEnemy[];
   boss: string | null;
   bossWarning: boolean;
-  rewardChest: boolean;
+  /** chest level 0-10 (null = no chest in this segment) */
+  rewardChest: number | null;
   shopkeeper: boolean;
 }
 
@@ -183,7 +184,9 @@ export async function loadSegments(url = 'data/AdventureModeSegmentsReal.xml'): 
           s.querySelector(':scope > bossWarning')?.textContent?.trim() ??
           null,
         bossWarning: s.querySelector(':scope > bossWarning') != null,
-        rewardChest: s.querySelector(':scope > rewardChest') != null,
+        rewardChest: s.querySelector(':scope > rewardChest')
+          ? Number(s.querySelector(':scope > rewardChest')?.textContent?.trim()) || 0
+          : null,
         shopkeeper: s.querySelector(':scope > shopkeeper') != null,
       });
     }

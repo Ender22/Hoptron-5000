@@ -18,7 +18,7 @@ import { Input } from './Input';
 import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { NinjaStars } from './NinjaStars';
 import { Pickups } from './Pickups';
-import { PlayerController } from './PlayerController';
+import { GROUND_Y, PlayerController } from './PlayerController';
 import { loadSave, writeSave } from './SaveData';
 import { SpellSystem } from './Spells';
 import { SwipeTrail } from './SwipeTrail';
@@ -153,6 +153,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'hamburger_suck_start', 'hamburger_suck_loop',
     'combo_bigRoar', 'combo_roar1', 'combo_roar2', 'combo_roar3', 'combo_blast',
     'combo_preBreak', 'combo_down', 'combo_up', 'combo_stomp1', 'combo_stomp2', 'combo_stomp3',
+    'chest_appear', 'chest_open', 'chest_coinOut1', 'chest_coinOut2', 'pickup_potion',
   ]);
 
   // ---- run state ----
@@ -341,6 +342,80 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
   }
 
+  // ---- reward chest segments (original spawnChest/spawnChestStuff) ----
+  const chest = new Sprite();
+  chest.anchor.set(0.5, 1);
+  chest.visible = false;
+  lootLayer.addChild(chest);
+  let chestState: 'none' | 'dropping' | 'waiting' | 'open' = 'none';
+  let chestTimer = 0;
+  let chestLevel = 0;
+
+  function startChest(level: number): void {
+    chestLevel = level;
+    chestState = 'dropping';
+    chestTimer = 0;
+    chest.texture = effectsAtlas.get('TreasureChest_Closed') ?? Texture.EMPTY;
+    chest.visible = true;
+    chest.alpha = 1;
+    chest.position.set(STAGE_W / 2, -100);
+    audio.play('chest_appear', 0, 0.8);
+  }
+
+  function openChest(): void {
+    chestState = 'open';
+    chestTimer = 0;
+    chest.texture = effectsAtlas.get('TreasureChest_Open') ?? Texture.EMPTY;
+    audio.play('chest_open', 0, 0.9);
+    audio.playRandom(['chest_coinOut1', 'chest_coinOut2'], 0.1, 0.7);
+    // condensed loot table from the original spawnChestStuff levels 0-10
+    const L = chestLevel;
+    const drops: [string, number][] = [
+      ['loot_s', 8 + Math.floor(Math.random() * 5)],
+      ['loot_l', 8 + Math.floor(Math.random() * 7)],
+      ['loot_xl', Math.min(3, Math.floor(L / 3) + (L >= 1 ? 1 : 0))],
+      ['health_s', L >= 9 ? 0 : 2],
+      ['health_l', L >= 6 && L < 9 ? 1 : 0],
+      ['health_full', L >= 9 ? 1 : 0],
+    ];
+    for (const [item, count] of drops) {
+      for (let i = 0; i < count; i++) pickups.spawn(chest.x + (Math.random() - 0.5) * 30, chest.y - 30, item);
+    }
+  }
+
+  function updateChest(): void {
+    if (chestState === 'none') return;
+    chestTimer += FIXED_DT;
+    if (chestState === 'dropping') {
+      // ease down from the sky over 2s
+      const u = Math.min(1, chestTimer / 2);
+      chest.y = -100 + (GROUND_Y + 8 + 100) * (1 - (1 - u) ** 2);
+      if (u >= 1) {
+        chestState = 'waiting';
+        chestTimer = 0;
+      }
+      return;
+    }
+    if (chestState === 'waiting') {
+      if (!player.dead && Math.abs(player.x - chest.x) < 55 && Math.abs(player.y - chest.y) < 70) {
+        openChest();
+        return;
+      }
+      if (chestTimer > 4.5) chest.alpha = Math.max(0, 1 - (chestTimer - 4.5) / 1.5);
+      if (chestTimer > 6) {
+        chestState = 'none';
+        chest.visible = false;
+      }
+      return;
+    }
+    // open: linger then fade
+    if (chestTimer > 1.5) chest.alpha = Math.max(0, 1 - (chestTimer - 1.5) / 1);
+    if (chestTimer > 2.5) {
+      chestState = 'none';
+      chest.visible = false;
+    }
+  }
+
   // ---- level loading ----
   const sconCache = new Map<string, { data: ReturnType<typeof parseScon>; textures: TextureMap }>();
 
@@ -363,6 +438,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     stars.clear();
     enemyShots.clearAll();
     bossShots.clearAll();
+    chestState = 'none';
+    chest.visible = false;
 
     let cached = sconCache.get(def.scon);
     if (!cached) {
@@ -700,6 +777,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
       if (wave) {
         wave.update(FIXED_DT * enemyTimeScale, player);
         if (wave.needsBoss !== null) void spawnBoss(wave.needsBoss);
+        if (wave.needsChest !== null) {
+          startChest(wave.needsChest);
+          wave.chestSpawned();
+        }
         combatTick();
         wave.cleanup();
         stars.update(wave.enemies);
@@ -723,6 +804,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         }
       }
       pickups.update(FIXED_DT, player.x, player.y);
+      updateChest();
       swipeTrail.update(FIXED_DT);
       bursts.update(FIXED_DT);
       shake.update(FIXED_DT);
