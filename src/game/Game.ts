@@ -132,6 +132,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'strawberry_burstOut', 'strawberry_bite', 'pineapple_thud', 'pineapple_start',
     'spin_start', 'impact1', 'impact2', 'impact3', 'projectileShot', 'berries_explode',
     'woosh', 'spawnSomeone', 'donut_laugh', 'slam', 'fireLoop', 'explosion_01',
+    'boss_is_coming', 'boss_killed', 'explosion_boss',
   ]);
 
   // ---- run state ----
@@ -179,8 +180,17 @@ export async function startGame(root: HTMLElement): Promise<void> {
     bursts.burst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
     pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
     if (enemy instanceof Boss) {
-      shake.add(10);
+      // boss death sequence: big shake + slow-mo beat + fanfare
+      shake.add(12);
       bossShots.clearAll();
+      enemyShots.clearAll();
+      enemyTimeScale = 0.2;
+      slowMoTimer = 1.3;
+      flashColor = 0xffffff;
+      screenFlash.tint = 0xffffff;
+      screenFlash.alpha = 0.5;
+      audio.play('boss_killed');
+      audio.play('explosion_boss', 0.1, 0.7);
       audio.playMusic(LEVELS[levelIndex].music, 2);
     }
   }
@@ -268,6 +278,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
         wave.levelComplete = true;
         return;
       }
+      // warning banner while the boss assets load (original bossWarning)
+      bossWarnTimer = 2.4;
+      audio.play('boss_is_coming', 0, 0.8);
+      const minWarning = new Promise((r) => setTimeout(r, 2200));
       let cached = sconCache.get(type.scon);
       if (!cached) {
         const [sconJson, textures] = await Promise.all([
@@ -277,6 +291,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         cached = { data: parseScon(sconJson), textures };
         sconCache.set(type.scon, cached);
       }
+      await minWarning;
       if (!wave || wave.needsBoss === null) return; // level changed while loading
 
       const spriter = new SpriterPlayer(`boss-${type.name}`, cached.data, cached.textures);
@@ -437,13 +452,19 @@ export async function startGame(root: HTMLElement): Promise<void> {
   centerText.anchor.set(0.5);
   centerText.position.set(STAGE_W / 2, STAGE_H / 2 - 50);
 
+  let bossWarnTimer = 0;
+  const bossWarnText = new Text({ text: '! WARNING !', style: { fontFamily: 'Verdana', fontSize: 42, fill: 0xff3030, fontWeight: 'bold', stroke: { color: 0x000000, width: 5 } } });
+  bossWarnText.anchor.set(0.5);
+  bossWarnText.position.set(STAGE_W / 2, 160);
+  bossWarnText.visible = false;
+
   const bossBarBack = new Graphics().roundRect(150, 446, 504, 18, 5).fill({ color: 0x000000, alpha: 0.6 });
   const bossBar = new Graphics();
   const bossName = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 11, fill: 0xffdddd, fontWeight: 'bold' } });
   bossName.anchor.set(0.5, 1);
   bossName.position.set(STAGE_W / 2, 446);
 
-  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossBarBack, bossBar, bossName, spells);
+  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossWarnText, bossBarBack, bossBar, bossName, spells);
 
   function drawHud(): void {
     const ratio = Math.max(0, player.hp / player.maxHp);
@@ -470,6 +491,15 @@ export async function startGame(root: HTMLElement): Promise<void> {
       centerText.text = '';
     }
     if (levelText.alpha > 0) levelText.alpha -= 0.005;
+
+    if (bossWarnTimer > 0) {
+      bossWarnTimer -= 1 / 60;
+      bossWarnText.visible = true;
+      bossWarnText.alpha = 0.55 + 0.45 * Math.sin(bossWarnTimer * 14); // pulse
+      bossWarnText.scale.set(1 + 0.06 * Math.sin(bossWarnTimer * 14));
+    } else {
+      bossWarnText.visible = false;
+    }
 
     const boss = wave?.boss;
     const showBoss = !!boss && boss.alive;
