@@ -25,7 +25,8 @@ const MIN_TIP_SPEED = 6; // px/tick below which no trail is emitted
 const FULL_TIP_SPEED = 30; // px/tick at which the trail is at max strength
 
 export class SwipeTrail extends Graphics {
-  glowColor = 0x66ccff;
+  glowColor = 0x2f5cff; // neon blue
+  coreColor = 0xcfe2ff; // blue-tinted hot core
 
   private samples: TrailSample[] = [];
   private lastTip: Point | null = null;
@@ -77,7 +78,7 @@ export class SwipeTrail extends Graphics {
       const bMidX = b.hiltX + (b.tipX - b.hiltX) * 0.45;
       const bMidY = b.hiltY + (b.tipY - b.hiltY) * 0.45;
       this.poly([aMidX, aMidY, a.tipX, a.tipY, b.tipX, b.tipY, bMidX, bMidY]).fill({
-        color: 0xffffff,
+        color: this.coreColor,
         alpha: alpha * 0.55,
       });
     }

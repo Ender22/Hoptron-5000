@@ -42,12 +42,16 @@ interface ComboStage {
 
 // original 4-hit chain: anims + forward impulses from onAttackTouch/attackAgainTime.
 // chainTime = original window / speed so logic stays in sync with the visuals.
+// impulses reduced from original 8/7/4/6 per playtest ("attacks push forward too much")
 const COMBO: ComboStage[] = [
-  { anim: 'attack1', chainTime: 0.25 / 1.35, impulse: 8, speed: 1.35 },
-  { anim: 'attack1_to_2', chainTime: 0.25 / 1.4, impulse: 7, speed: 1.4 },
-  { anim: 'attack2_to_3', chainTime: 0.45 / 1.85, impulse: 4, speed: 1.85 }, // 600ms anim, the sluggish one
-  { anim: 'attack3_to_4', chainTime: 0.5 / 1.4, impulse: 6, speed: 1.4 },
+  { anim: 'attack1', chainTime: 0.25 / 1.35, impulse: 4.5, speed: 1.35 },
+  { anim: 'attack1_to_2', chainTime: 0.25 / 1.4, impulse: 4, speed: 1.4 },
+  { anim: 'attack2_to_3', chainTime: 0.45 / 1.85, impulse: 2.5, speed: 1.85 }, // 600ms anim, the sluggish one
+  { anim: 'attack3_to_4', chainTime: 0.5 / 1.4, impulse: 3.5, speed: 1.4 },
 ];
+/** while attacking airborne, gravity is damped and fall speed capped (air combos) */
+const AIR_ATTACK_GRAVITY_FACTOR = 0.3;
+const AIR_ATTACK_MAX_FALL = 2.5;
 /** after this fraction of a stage, jump can cancel the recovery (dash cancels anytime) */
 const CANCEL_WINDOW = 0.55;
 
@@ -64,6 +68,13 @@ export class PlayerController {
 
   /** i-frames flag (dash) — combat will honor this */
   invincible = false;
+
+  // original BUNNY_DEFAULT_MAX_HP = 50
+  maxHp = 50;
+  hp = 50;
+  dead = false;
+  private iframeTimer = 0;
+  private hurtFlashOn = false;
 
   private spriter: SpriterPlayer;
   private input: Input;
@@ -84,9 +95,71 @@ export class PlayerController {
     this.applyTransform();
   }
 
+  /** apply damage; returns false if it was dodged/ignored */
+  hurt(amount: number, knockDir: number): boolean {
+    if (this.invincible || this.iframeTimer > 0 || this.dead) return false;
+    this.hp -= amount;
+    this.xVel = 6 * knockDir;
+    this.yVel = -4;
+    this.onGround = false;
+    this.spriter.playbackSpeed = 1;
+    this.comboStage = -1;
+
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.dead = true;
+      this.spriter.playAnim('die', 'die_idle', null, true, true);
+      return true;
+    }
+    this.iframeTimer = 1.1;
+    this.state = 'air';
+    this.spriter.playAnim('hurt', 'idle_air', null, true);
+    return true;
+  }
+
+  respawn(x: number): void {
+    this.dead = false;
+    this.hp = this.maxHp;
+    this.x = x;
+    this.y = GROUND_Y;
+    this.xVel = 0;
+    this.yVel = 0;
+    this.state = 'ground';
+    this.onGround = true;
+    this.iframeTimer = 1;
+    this.spriter.playbackSpeed = 1;
+    this.spriter.alpha = 1;
+    this.spriter.playAnim('respawn', 'idle', null, true);
+  }
+
+  get hasIFrames(): boolean {
+    return this.invincible || this.iframeTimer > 0;
+  }
+
+  /** active combo stage index (-1 when not attacking) — used for per-swing hit sets */
+  get comboStageIndex(): number {
+    return this.comboStage;
+  }
+
   /** fixed 60Hz tick; dt is always 1/60 but passed for the spriter clock */
   update(dt: number): void {
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+
+    // i-frame flicker after getting hit
+    if (this.iframeTimer > 0) {
+      this.iframeTimer -= dt;
+      this.hurtFlashOn = !this.hurtFlashOn;
+      this.spriter.alpha = this.hurtFlashOn ? 0.45 : 0.9;
+      if (this.iframeTimer <= 0) this.spriter.alpha = 1;
+    }
+
+    if (this.dead) {
+      this.xVel *= 0.9;
+      this.integrate();
+      this.applyTransform();
+      this.spriter.advanceTime(dt);
+      return;
+    }
 
     switch (this.state) {
       case 'dash':
@@ -276,7 +349,13 @@ export class PlayerController {
     }
 
     if (!this.onGround && this.state !== 'dash') {
-      this.yVel += GRAVITY;
+      if (this.state === 'attack') {
+        // float during air attacks so combos can stay airborne
+        this.yVel += GRAVITY * AIR_ATTACK_GRAVITY_FACTOR;
+        if (this.yVel > AIR_ATTACK_MAX_FALL) this.yVel = AIR_ATTACK_MAX_FALL;
+      } else {
+        this.yVel += GRAVITY;
+      }
     }
 
     // ground
