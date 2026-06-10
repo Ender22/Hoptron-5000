@@ -56,7 +56,7 @@ Title (level select + pick-2-of-8 spell loadout, localStorage saves) → 11 leve
 
 ## ROADMAP — full task list to game completion
 
-Work phases in order; each phase ends with: typecheck, browser-verify, commit, update CLAUDE.md + project memory. "Done" definition for 1.0: the original game faithfully remade (minus arena mode, plus controller combat + spell loadout), deployed to a URL friends can open.
+Work phases in order; each phase ends with: typecheck, browser-verify, commit, update CLAUDE.md + project memory, **git push** (remote: github.com/Ender22/Hoptron-5000; repo-local identity is the personal account — never change user.email here). "Done" definition for 1.0: the original game faithfully remade (minus arena mode, plus controller combat + spell loadout), deployed to a URL friends can open.
 
 ### Phase A — Debug tooling (DO FIRST next session — user requested)
 
