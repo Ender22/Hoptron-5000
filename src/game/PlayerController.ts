@@ -77,6 +77,8 @@ export class PlayerController {
 
   /** i-frames flag (dash) — combat will honor this */
   invincible = false;
+  /** debug-panel god mode: never takes damage */
+  godMode = false;
 
   // original BUNNY_DEFAULT_MAX_HP = 50
   maxHp = 50;
@@ -113,7 +115,7 @@ export class PlayerController {
 
   /** apply damage; returns false if it was dodged/ignored */
   hurt(amount: number, knockDir: number): boolean {
-    if (this.invincible || this.iframeTimer > 0 || this.dead) return false;
+    if (this.godMode || this.invincible || this.iframeTimer > 0 || this.dead) return false;
     this.hp -= amount;
     audio.play('bunny_hurt');
     this.xVel = 6 * knockDir;
@@ -151,7 +153,7 @@ export class PlayerController {
   }
 
   get hasIFrames(): boolean {
-    return this.invincible || this.iframeTimer > 0;
+    return this.godMode || this.invincible || this.iframeTimer > 0;
   }
 
   /** active combo stage index (-1 when not attacking) — used for per-swing hit sets */

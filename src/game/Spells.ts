@@ -204,6 +204,11 @@ export class SpellSystem extends Container {
     s.def.cast(this.ctx);
   }
 
+  /** debug helper: make both spells castable immediately */
+  resetCooldowns(): void {
+    for (const s of this.slots) s.remaining = 0;
+  }
+
   update(dt: number): void {
     for (const s of this.slots) {
       if (s.remaining > 0) s.remaining = Math.max(0, s.remaining - dt);

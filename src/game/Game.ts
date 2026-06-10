@@ -10,6 +10,7 @@ import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
 import { Boss } from './Boss';
+import { DebugPanel } from './DebugPanel';
 import { Enemy } from './Enemy';
 import { Input } from './Input';
 import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
@@ -183,6 +184,14 @@ export async function startGame(root: HTMLElement): Promise<void> {
   app.stage.addChild(screenFlash);
   let flashColor = 0xffffff;
 
+  function damageEnemy(enemy: Enemy, amount: number, dir: number): void {
+    const wasAlive = enemy.alive;
+    enemy.frozenTimer = 0;
+    enemy.invincible = false;
+    enemy.hurt(amount, dir);
+    if (wasAlive && !enemy.alive) onEnemyKilled(enemy);
+  }
+
   const spells = new SpellSystem(
     {
       player,
@@ -190,13 +199,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
       stars,
       bursts,
       shake,
-      damage: (enemy, amount, dir) => {
-        const wasAlive = enemy.alive;
-        enemy.frozenTimer = 0;
-        enemy.invincible = false;
-        enemy.hurt(amount, dir);
-        if (wasAlive && !enemy.alive) onEnemyKilled(enemy);
-      },
+      damage: damageEnemy,
       flash: (color, alpha) => {
         flashColor = color;
         screenFlash.tint = color;
@@ -301,6 +304,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
     levelText.alpha = 1;
+    debugPanel.refreshEnemyList();
   }
 
   // ---- sword swing tracking ----
@@ -468,12 +472,87 @@ export async function startGame(root: HTMLElement): Promise<void> {
     if (e.code === 'KeyT' && (player.dead || gameComplete) && !atTitle) gotoTitle();
   });
 
-  // dev hooks: jump to a level / boss from the console
-  (window as any).__gotoLevel = (n: number) => {
+  // ---- debug tooling (Phase A): panel + console hooks ----
+  let gameSpeed = 1;
+  let showHitboxes = false;
+  const hitboxGfx = new Graphics();
+  effectsLayer.addChild(hitboxGfx);
+
+  function debugGotoLevel(n: number): void {
     levelIndex = Math.max(0, Math.min(LEVELS.length - 1, n - 1));
+    if (atTitle) {
+      atTitle = false;
+      title.visible = false;
+      player.respawn(400);
+    }
+    gameComplete = false;
     void loadLevel(levelIndex);
-  };
+  }
+
+  const debugPanel = new DebugPanel({
+    levelCount: LEVELS.length,
+    gotoLevel: debugGotoLevel,
+    bossNow: () => wave?.skipToBoss(),
+    spawnEnemy: (name) => wave?.spawnNamed(name),
+    enemyNames: () => [...(typesByCategory.get(LEVELS[levelIndex].category)?.types.keys() ?? [])],
+    giveCoins: (n) => {
+      coins += n;
+    },
+    giveStars: (n) => {
+      starAmmo += n;
+    },
+    fullHeal: () => {
+      player.hp = player.maxHp;
+    },
+    toggleGod: () => {
+      player.godMode = !player.godMode;
+      return player.godMode;
+    },
+    killAll: () => {
+      for (const e of wave?.enemies ?? []) {
+        if (e.alive) damageEnemy(e, 999999, 1);
+      }
+    },
+    resetCooldowns: () => spells.resetCooldowns(),
+    setGameSpeed: (s) => {
+      gameSpeed = s;
+    },
+    toggleHitboxes: () => {
+      showHitboxes = !showHitboxes;
+      if (!showHitboxes) hitboxGfx.clear();
+      return showHitboxes;
+    },
+  });
+
+  function drawHitboxes(): void {
+    hitboxGfx.clear();
+    if (!showHitboxes || !wave) return;
+    // enemy body radii (sword-hit circles) + contact boxes
+    for (const e of wave.enemies) {
+      if (!e.alive) continue;
+      hitboxGfx.circle(e.x, e.y - 35, ENEMY_HIT_RADIUS).stroke({ color: 0xff5555, width: 1.5 });
+    }
+    // player contact box (combatTick: |dx|<48, |dy|<60 around y-40)
+    hitboxGfx.rect(player.x - 48, player.y - 40 - 60, 96, 120).stroke({ color: 0x4dff6a, width: 1.5 });
+    // sword segment while attacking
+    const sword = bunnySpriter.getPart(SWORD_PART);
+    if (sword && player.state === 'attack') {
+      const hilt = effectsLayer.toLocal(sword.toGlobal(hiltLocal));
+      const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
+      hitboxGfx.moveTo(hilt.x, hilt.y).lineTo(tip.x, tip.y).stroke({ color: 0x5db9ff, width: 2 });
+    }
+  }
+
+  // console hooks (kept for scripted browser testing)
+  (window as any).__gotoLevel = debugGotoLevel;
   (window as any).__bossNow = () => wave?.skipToBoss();
+  (window as any).__spawn = (name: string) => wave?.spawnNamed(name);
+  (window as any).__god = () => (player.godMode = !player.godMode);
+  (window as any).__give = (c = 500, s = 30) => {
+    coins += c;
+    starAmmo += s;
+  };
+  (window as any).__speed = (s: number) => (gameSpeed = s);
 
   // ---- title screen ----
   const title = new TitleScreen(save, LEVELS.length, effectsAtlas);
@@ -496,7 +575,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
   // ---- fixed-timestep loop ----
   let accumulator = 0;
   app.ticker.add((ticker) => {
-    accumulator += Math.min(ticker.deltaMS / 1000, 0.1);
+    accumulator += Math.min(ticker.deltaMS / 1000, 0.1) * gameSpeed;
     while (accumulator >= FIXED_DT) {
       accumulator -= FIXED_DT;
       input.update(FIXED_DT);
@@ -555,5 +634,6 @@ export async function startGame(root: HTMLElement): Promise<void> {
       input.postUpdate();
     }
     drawHud();
+    drawHitboxes();
   });
 }

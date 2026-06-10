@@ -180,10 +180,15 @@ export class WaveManager {
         break;
       }
     }
-    const type = this.types.get(pick.name);
+    this.spawnNamed(pick.name);
+  }
+
+  /** spawn a specific enemy type by name (also used by the debug panel) */
+  spawnNamed(name: string): boolean {
+    const type = this.types.get(name);
     if (!type) {
-      console.warn(`[wave] unknown enemy type: ${pick.name}`);
-      return;
+      console.warn(`[wave] unknown enemy type: ${name}`);
+      return false;
     }
 
     const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
@@ -192,6 +197,7 @@ export class WaveManager {
     enemy.spawnAt(x, y);
     this.layer.addChild(spriter);
     this.enemies.push(enemy);
+    return true;
   }
 
   private spawnPosition(spawnType: string): [number, number] {
