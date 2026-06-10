@@ -8,10 +8,11 @@ import { loadStarlingAtlas, type TextureMap } from '../assets/starlingAtlas';
 import { parseScon } from '../spriter/parseScon';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
-import { loadEnemyTypes, loadSegments, type LevelEnemies, type Segment } from './data/levelData';
+import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
+import { Boss } from './Boss';
 import { Enemy } from './Enemy';
 import { Input } from './Input';
-import { Hitstop, ParticleBursts, ScreenShake } from './Juice';
+import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { NinjaStars } from './NinjaStars';
 import { Pickups } from './Pickups';
 import { PlayerController } from './PlayerController';
@@ -108,6 +109,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
   lootLayer.addChild(pickups);
   const stars = new NinjaStars(effectsAtlas);
   effectsLayer.addChild(stars);
+  const bossShots = new BossShots();
+  effectsLayer.addChild(bossShots);
 
   const input = new Input();
   const player = new PlayerController(bunnySpriter, input);
@@ -150,8 +153,58 @@ export async function startGame(root: HTMLElement): Promise<void> {
   function onEnemyKilled(enemy: Enemy): void {
     wave?.onKill();
     score += enemy.type.pointsAward;
-    bursts.burst(enemy.x, enemy.y, enemy.type.deathPS);
+    bursts.burst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
     pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
+    if (enemy instanceof Boss) {
+      shake.add(10);
+      bossShots.clearAll();
+    }
+  }
+
+  // ---- boss spawning ----
+  let bossLoading = false;
+
+  bossShots.onPlayerHit = () => {
+    const boss = wave?.boss;
+    if (player.hurt(boss ? Math.max(4, boss.type.attackDmg * 0.6) : 6, player.facing * -1)) {
+      shake.add(5);
+    }
+  };
+
+  async function spawnBoss(bossId: number): Promise<void> {
+    if (bossLoading || !wave) return;
+    bossLoading = true;
+    try {
+      const def = LEVELS[levelIndex];
+      const bossList = typesByCategory.get(def.category)?.bosses ?? [];
+      const type = bossList[Math.min(bossId, bossList.length - 1)];
+      if (!type) {
+        console.warn(`[boss] no boss ${bossId} for ${def.category}`);
+        wave.levelComplete = true;
+        return;
+      }
+      let cached = sconCache.get(type.scon);
+      if (!cached) {
+        const [sconJson, textures] = await Promise.all([
+          fetch(`assets/scml/${type.scon}.scon`).then((r) => r.json()),
+          loadStarlingAtlas(`assets/textureAtlas/${def.atlas}.xml`),
+        ]);
+        cached = { data: parseScon(sconJson), textures };
+        sconCache.set(type.scon, cached);
+      }
+      if (!wave || wave.needsBoss === null) return; // level changed while loading
+
+      const spriter = new SpriterPlayer(`boss-${type.name}`, cached.data, cached.textures);
+      const boss = new Boss(type, spriter);
+      boss.onShoot = (x, y, vx, vy) => bossShots.fire(x, y, vx, vy);
+      boss.onLand = () => shake.add(8);
+      boss.spawnAt(620, type.effectedByGravity ? 0 : 160); // drops in / flies in
+      enemyLayer.addChild(spriter);
+      wave.bossSpawned(boss);
+      console.log(`[boss] ${type.name} spawned (hp ${type.hp})`);
+    } finally {
+      bossLoading = false;
+    }
   }
 
   // ---- level loading ----
@@ -289,7 +342,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
   centerText.anchor.set(0.5);
   centerText.position.set(STAGE_W / 2, STAGE_H / 2 - 50);
 
-  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText);
+  const bossBarBack = new Graphics().roundRect(150, 446, 504, 18, 5).fill({ color: 0x000000, alpha: 0.6 });
+  const bossBar = new Graphics();
+  const bossName = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 11, fill: 0xffdddd, fontWeight: 'bold' } });
+  bossName.anchor.set(0.5, 1);
+  bossName.position.set(STAGE_W / 2, 446);
+
+  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossBarBack, bossBar, bossName);
 
   function drawHud(): void {
     const ratio = Math.max(0, player.hp / player.maxHp);
@@ -316,6 +375,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
       centerText.text = '';
     }
     if (levelText.alpha > 0) levelText.alpha -= 0.005;
+
+    const boss = wave?.boss;
+    const showBoss = !!boss && boss.alive;
+    bossBarBack.visible = bossBar.visible = bossName.visible = showBoss;
+    if (boss && showBoss) {
+      const r = Math.max(0, boss.hp / boss.type.hp);
+      bossBar.clear();
+      bossBar.roundRect(153, 449, 498 * r, 12, 4).fill({ color: 0xe83b3b });
+      bossName.text = boss.type.name.toUpperCase();
+    }
   }
 
   function restart(): void {
@@ -331,11 +400,12 @@ export async function startGame(root: HTMLElement): Promise<void> {
     if (e.code === 'KeyR' && player.dead) restart();
   });
 
-  // dev hook: jump to a level from the console
+  // dev hooks: jump to a level / boss from the console
   (window as any).__gotoLevel = (n: number) => {
     levelIndex = Math.max(0, Math.min(LEVELS.length - 1, n - 1));
     void loadLevel(levelIndex);
   };
+  (window as any).__bossNow = () => wave?.skipToBoss();
 
   // ---- fixed-timestep loop ----
   let accumulator = 0;
@@ -355,9 +425,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
       player.update(FIXED_DT);
       if (wave) {
         wave.update(FIXED_DT, player);
+        if (wave.needsBoss !== null) void spawnBoss(wave.needsBoss);
         combatTick();
         wave.cleanup();
         stars.update(wave.enemies);
+        bossShots.update(FIXED_DT, player.x, player.y, !player.dead && !player.hasIFrames);
 
         // level progression
         if (wave.levelComplete && !gameComplete) {

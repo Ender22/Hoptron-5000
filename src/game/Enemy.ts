@@ -1,5 +1,5 @@
-/**
- * Enemy — stats from the original XML, physics from MovableObject
+﻿/**
+ * Enemy - stats from the original XML, physics from MovableObject
  * (SCALE 0.55, enemy gravity 0.5), AI behaviors approximating the original
  * archetype classes (Mover, Wanderer, Chaser, GroundPopper, Crusher,
  * Exploder, ...). Anim names are uniform across enemy scons: idle/move/hurt/die.
@@ -34,10 +34,13 @@ export class Enemy {
   /** dwell timer for contact damage (original withinAttackDistance logic) */
   contactTime = 0;
 
+  /** bosses keep acting while hurt and don't get knocked back (original behavior) */
+  protected isBoss = false;
+
   /** per-AI scratch state */
-  private movingLeft = false;
-  private aiTimer = 0;
-  private aiPhase = 0;
+  protected movingLeft = false;
+  protected aiTimer = 0;
+  protected aiPhase = 0;
   private targetX = 0;
 
   private hurtTimer = 0;
@@ -61,7 +64,7 @@ export class Enemy {
     this.applyTransform();
   }
 
-  private play(anim: string): void {
+  protected play(anim: string): void {
     if (this.spriter.hasAnim(anim) && this.spriter.currentAnimationName !== anim) {
       this.spriter.playAnim(anim);
     }
@@ -71,23 +74,26 @@ export class Enemy {
     if (this.invincible || !this.alive) return false;
     this.hp -= damage;
     this.invincible = true;
-    this.canDamage = false;
-    this.canUpdate = false;
     this.contactTime = 0;
     this.spriter.setColor(0xff5555);
     this.hurtTimer = 0.2; // original: invincible cleared after 0.2s
-    this.recoverTimer = 0.6; // original: canUpdate/canDamage restored after 0.6s
 
     if (this.hp <= 0) {
       this.die();
       return true;
     }
-    this.play('hurt');
-    this.xVel = 4 * knockDir; // original knockback
+    if (!this.isBoss) {
+      // original: non-bosses are staggered, bosses keep going
+      this.canDamage = false;
+      this.canUpdate = false;
+      this.recoverTimer = 0.6;
+      this.play('hurt');
+      this.xVel = 4 * knockDir;
+    }
     return true;
   }
 
-  private die(): void {
+  protected die(): void {
     this.alive = false;
     this.canDamage = false;
     this.xVel = 0;
@@ -123,7 +129,7 @@ export class Enemy {
   }
 
   // ---- AI dispatch ----
-  private runAI(dt: number, player: PlayerView): void {
+  protected runAI(dt: number, player: PlayerView): void {
     switch (this.type.aiType) {
       case 'Wanderer':
         this.aiWanderer(dt);
@@ -280,9 +286,13 @@ export class Enemy {
     if (this.x < -20) this.x = -20;
   }
 
+  /** bosses face the player directly instead of by velocity */
+  protected faceOverride: number | null = null;
+
   private applyTransform(): void {
     this.spriter.position.set(this.x, this.y);
-    const facing = this.xVel < -0.1 ? -1 : this.xVel > 0.1 ? 1 : Math.sign(this.spriter.scale.x) || 1;
+    const facing =
+      this.faceOverride ?? (this.xVel < -0.1 ? -1 : this.xVel > 0.1 ? 1 : Math.sign(this.spriter.scale.x) || 1);
     this.spriter.scale.set(ENEMY_SCALE * facing, ENEMY_SCALE);
   }
 }

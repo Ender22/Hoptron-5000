@@ -29,11 +29,15 @@ export interface EnemyType {
   timeToDamage: number;
   maxNum: number;
   loot: LootEntry[];
+  /** boss-only: projectile texture name in the level atlas (e.g. Watermelon_Seed) */
+  projectileImage: string;
 }
 
 export interface LevelEnemies {
   foodCategory: string;
   types: Map<string, EnemyType>;
+  /** boss entries (from <boss> elements), indexed by their XML id */
+  bosses: EnemyType[];
 }
 
 export interface SegmentEnemy {
@@ -73,36 +77,44 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
   const xml = new DOMParser().parseFromString(await (await fetch(url)).text(), 'application/xml');
   const levels: LevelEnemies[] = [];
 
+  function parseType(e: Element): EnemyType {
+    return {
+      id: num(e, 'id'),
+      name: text(e, 'name'),
+      scon: text(e, 'scon'),
+      atlas: text(e, 'atlas'),
+      hp: num(e, 'hp', 10),
+      attackDmg: num(e, 'attackDmg', 5),
+      acceleration: num(e, 'acceleration', 0.5),
+      maxMovementSpeed: num(e, 'maxMovementSpeed', 2),
+      effectedByGravity: num(e, 'effectedByGravity', 1) === 1,
+      deathPS: text(e, 'deathPS'),
+      spawnType: text(e, 'spawnType'),
+      aiType: text(e, 'aiType'),
+      difficulty: num(e, 'difficulty', 1),
+      pointsAward: num(e, 'pointsAward', 10),
+      timeToDamage: num(e, 'time_to_damage', 0.2),
+      maxNum: attr(e, 'maxNum', 10),
+      loot: Array.from(e.querySelectorAll('lootItem')).map((l) => ({
+        item: l.textContent?.trim() ?? '',
+        freq: attr(l, 'freq', 0),
+        minAmount: attr(l, 'minAmount', 1),
+        maxAmount: attr(l, 'maxAmount', 1),
+      })),
+      projectileImage: text(e, 'image'),
+    };
+  }
+
   for (const levelEl of Array.from(xml.querySelectorAll('ENEMIES > level'))) {
     const types = new Map<string, EnemyType>();
     for (const e of Array.from(levelEl.querySelectorAll(':scope > enemyType'))) {
-      const type: EnemyType = {
-        id: num(e, 'id'),
-        name: text(e, 'name'),
-        scon: text(e, 'scon'),
-        atlas: text(e, 'atlas'),
-        hp: num(e, 'hp', 10),
-        attackDmg: num(e, 'attackDmg', 5),
-        acceleration: num(e, 'acceleration', 0.5),
-        maxMovementSpeed: num(e, 'maxMovementSpeed', 2),
-        effectedByGravity: num(e, 'effectedByGravity', 1) === 1,
-        deathPS: text(e, 'deathPS'),
-        spawnType: text(e, 'spawnType'),
-        aiType: text(e, 'aiType'),
-        difficulty: num(e, 'difficulty', 1),
-        pointsAward: num(e, 'pointsAward', 10),
-        timeToDamage: num(e, 'time_to_damage', 0.2),
-        maxNum: attr(e, 'maxNum', 10),
-        loot: Array.from(e.querySelectorAll('lootItem')).map((l) => ({
-          item: l.textContent?.trim() ?? '',
-          freq: attr(l, 'freq', 0),
-          minAmount: attr(l, 'minAmount', 1),
-          maxAmount: attr(l, 'maxAmount', 1),
-        })),
-      };
+      const type = parseType(e);
       types.set(type.name, type);
     }
-    levels.push({ foodCategory: levelEl.getAttribute('foodCategory') ?? '', types });
+    const bosses = Array.from(levelEl.querySelectorAll(':scope > boss'))
+      .map(parseType)
+      .sort((a, b) => a.id - b.id);
+    levels.push({ foodCategory: levelEl.getAttribute('foodCategory') ?? '', types, bosses });
   }
   return levels;
 }
@@ -125,7 +137,11 @@ export async function loadSegments(url = 'data/AdventureModeSegmentsReal.xml'): 
           name: e.textContent?.trim() ?? '',
           spawnFreq: attr(e, 'spawnFreq', 100),
         })),
-        boss: s.querySelector(':scope > boss')?.textContent?.trim() ?? null,
+        // <bossWarning> doubles as the boss spawn marker in the shipped data
+        boss:
+          s.querySelector(':scope > boss')?.textContent?.trim() ??
+          s.querySelector(':scope > bossWarning')?.textContent?.trim() ??
+          null,
         bossWarning: s.querySelector(':scope > bossWarning') != null,
         rewardChest: s.querySelector(':scope > rewardChest') != null,
         shopkeeper: s.querySelector(':scope > shopkeeper') != null,

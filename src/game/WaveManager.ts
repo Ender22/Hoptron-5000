@@ -39,18 +39,30 @@ export class WaveManager {
     this.nextSegment();
   }
 
+  /** boss id (from the segment XML) waiting for the Game layer to spawn */
+  needsBoss: number | null = null;
+  private activeBoss: Enemy | null = null;
+
   private nextSegment(): void {
     this.segmentIndex++;
     this.killsThisSegment = 0;
     this.segmentTimer = 0;
     this.spawnTimer = 0.4;
+    this.needsBoss = null;
+    this.activeBoss = null;
 
     while (this.segmentIndex < this.segments.length) {
       const seg = this.segments[this.segmentIndex];
+      if (seg.boss !== null) {
+        this.current = seg;
+        this.delayTimer = Math.max(seg.delay, 0.8);
+        this.needsBoss = Number(seg.boss) || 0;
+        console.log(`[wave] segment ${this.segmentIndex}: BOSS ${this.needsBoss}`);
+        return;
+      }
       // skip special segments not implemented yet
-      if (seg.boss || seg.shopkeeper || seg.rewardChest || seg.enemies.length === 0) {
+      if (seg.shopkeeper || seg.rewardChest || seg.enemies.length === 0) {
         console.log(`[wave] skipping special segment ${this.segmentIndex}`, {
-          boss: seg.boss,
           shopkeeper: seg.shopkeeper,
           chest: seg.rewardChest,
         });
@@ -66,6 +78,28 @@ export class WaveManager {
     this.current = null;
     this.levelComplete = true;
     console.log('[wave] level complete!');
+  }
+
+  /** dev helper: jump straight to this level's boss segment */
+  skipToBoss(): void {
+    const idx = this.segments.findIndex((s) => s.boss !== null);
+    if (idx === -1) return;
+    for (const e of this.enemies) {
+      if (e.alive) e.hurt(99999, 1);
+    }
+    this.segmentIndex = idx - 1;
+    this.nextSegment();
+  }
+
+  /** Game layer hands over the spawned boss */
+  bossSpawned(boss: Enemy): void {
+    this.needsBoss = null;
+    this.activeBoss = boss;
+    this.enemies.push(boss);
+  }
+
+  get boss(): Enemy | null {
+    return this.activeBoss;
   }
 
   get aliveCount(): number {
@@ -86,6 +120,12 @@ export class WaveManager {
 
     if (this.delayTimer > 0) {
       this.delayTimer -= dt;
+      return;
+    }
+
+    // boss segment: wait for spawn (Game layer handles it), advance on death
+    if (seg.boss !== null) {
+      if (this.activeBoss && !this.activeBoss.alive) this.nextSegment();
       return;
     }
 

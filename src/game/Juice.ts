@@ -66,6 +66,54 @@ const DEATH_COLORS: Record<string, number> = {
   explosion_pink: 0xff7fc4,
 };
 
+interface Shot {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  age: number;
+}
+
+/** boss projectiles — code-drawn glowing orbs */
+export class BossShots extends Graphics {
+  /** fired when a shot touches the player */
+  onPlayerHit: (() => void) | null = null;
+
+  color = 0xff8833;
+  private shots: Shot[] = [];
+
+  fire(x: number, y: number, vx: number, vy: number): void {
+    this.shots.push({ x, y, vx, vy, age: 0 });
+  }
+
+  update(dt: number, playerX: number, playerY: number, playerVulnerable: boolean): void {
+    this.clear();
+    for (let i = this.shots.length - 1; i >= 0; i--) {
+      const s = this.shots[i];
+      s.age += dt;
+      s.x += s.vx;
+      s.y += s.vy;
+      if (s.x < -40 || s.x > 840 || s.y > 500 || s.y < -60 || s.age > 6) {
+        this.shots.splice(i, 1);
+        continue;
+      }
+      if (playerVulnerable && Math.abs(s.x - playerX) < 28 && Math.abs(s.y - (playerY - 40)) < 42) {
+        this.shots.splice(i, 1);
+        this.onPlayerHit?.();
+        continue;
+      }
+      const pulse = 1 + Math.sin(s.age * 18) * 0.15;
+      this.circle(s.x, s.y, 11 * pulse).fill({ color: this.color, alpha: 0.35 });
+      this.circle(s.x, s.y, 6 * pulse).fill({ color: 0xffffff, alpha: 0.9 });
+    }
+  }
+
+  clearAll(): void {
+    this.shots.length = 0;
+    this.clear();
+  }
+}
+
 export class ParticleBursts extends Graphics {
   private particles: BurstParticle[] = [];
 
