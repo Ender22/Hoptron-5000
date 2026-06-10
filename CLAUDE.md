@@ -97,13 +97,15 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] Bouncer, Dropper, Spinner, Icecream (scoop1+scoop2 split on death), Fries (homing FryMissile, ease-40 turn after 0.5s), Stick (3 ball-drop anims → stab chase, per-count death anims), Spawner (nugget pump 1.35s, maxNum cap), MiddleSlammer (linked pairs spawned together; donut diff1 slam→break→laugh→walls loop, pizza diff5 fuses at 3×HP and chases). Candle/Note/HamburgerHeart deferred to Phase C (boss minions). PowerSwat (swat) = boss attachment, not in any wave segment — Phase C.
 - [x] All 5 worlds eyeballed in browser; spawn types at_ground_pos/offscreen_left/jump_from_side added (corn was spawning off-screen).
 
-### Phase C — Boss fidelity (one or two bosses per work chunk; spec = com/characterclasses/Boss_*.as + planning/*.txt)
+### Phase C — Boss fidelity — 10/12 DONE (commits 64811e8 + 656b824, overnight 2026-06-10/11)
 
-- [ ] Watermelon (366 ln), Durian (442, flying), Eggplant (383), Pumpkin (652, super-blast), Sundae (452, scoop projectiles), Cake (525, music notes), Noodles (534), Sushi (647), Hamburger (451, gravity pull), Combo (481, KO system).
+- [x] ALL TEN regular bosses are bespoke (`BossBehaviors.ts`, `createBoss` factory by aiType; generic Boss = fallback): Watermelon (action loop, gun-axis volleys, jump-away), Durian (PowerSwat pair guards it → 6s power-down window → recover/regrow), Eggplant (HP-weighted boxer, turn-punch, shoryuken escape), Pumpkin (21-action loop, boomerang head, blob lobs, off-screen side blasts, shrinks with damage), Sundae (throws + charge; stun via blocked-hit counter — original was slash-projectiles-back, simplified: noted fidelity gap), Cake (6 relighting candle minions → stun; hand rays, slam re-entries, homing candle missiles, 20-note song stream), Noodles (melee: lunges/combos/wall-dives/3-pass superslash/defend+backflip counters), Sushi (orbiting shields, boomerang fish, wasabi mortars, rapid-cut counter), Hamburger (heart AttachedMinion is the target, exposed on laugh/suck; suck pulls player via services.pullPlayer, chew+spit), Combo (KO break system via Enemy.koMode: shatters into KO-able pieces every quarter HP).
+- [x] Boss intro warning banner (pulsing, boss_is_coming) + boss death slow-mo/flash/fanfare; per-boss sounds wired.
+- [x] Boss minions: PowerSwat, AttachedMinion (heart/candles), NoteMinion — spawned via services.spawnChild, registered in createEnemy.
 - [ ] Burrito final boss (3,122 ln: multi-phase transformations watermelon→…→combo via final_scon entities, candles, swats, hearts).
 - [ ] Magic Man fight = level 11 (1,465 ln: portals, beams, magicMan_Fight_scon + TA_Magicman-hd).
 - [ ] Resolve final-world bossWarning ids 2/3 (likely burrito then magicman — read level 10/11 segment XML + LevelBase beginMMFight).
-- [ ] Boss intro warning banner, boss death slow-mo/sequence, per-boss sounds (cake_roar, watermelon_jump etc. exist in fx/).
+- [ ] Fidelity follow-ups: Sundae projectile slash-back (orig mechanic), Hamburger heart HP probably needs tuning vs boss HP, Cake candle positions are offset guesses (pointPos when rig has points), Combo break thresholds quartered instead of original 1000/2000-HP steps.
 
 ### Phase D — Run economy & shops
 
