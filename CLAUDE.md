@@ -148,6 +148,17 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 
 `__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma.
 
+## Working style & session tidbits
+
+- **The user (Devin) is the original author** of the 2015 game — it's his IP. He wants full autonomy: build without approval, scope sessions to one roadmap phase, treat his casual playtest notes as authoritative tuning directives. If a feature would need new sprites, scratch it rather than ask.
+- **Git identity**: machine's global git config is his WORK account — this repo is locally pinned to personal (Ender22 + noreply email). Never change `user.email` here; remote is `github.com/Ender22/Hoptron-5000`.
+- **Dev server**: may already be running on :5173 from a previous session — check before starting another.
+- **Browser testing technique**: drive the game by JS-dispatching `KeyboardEvent`s (keydown without keyup = hold); screenshots' DPI scale flip-flops, so click via element refs (`find` tool) or JS instead of coordinates; console hooks + `read_console_messages` with a pattern.
+- **Animation questions** → use the viewer (`/?viewer`) before writing code; it's the fastest fidelity check.
+- **PowerShell hazard**: `Set-Content` after regex-replace mangles unicode (em-dashes) in source files — use the Edit tool or ASCII.
+- Never port: arena mode (dead server), Vungle ads, IAP, profiles (single localStorage save replaces them). Stretch idea (user-approved someday-maybe): the 10 local arena rule/segment XMLs could become an offline "challenge mode".
+- Original 800×480 stage and fixed 60Hz step are load-bearing (all original constants are per-frame-at-60).
+
 ## Project memory
 
-Long-form decision history lives in Claude's project memory (`hoptron-remake-decisions.md`); this file is the canonical continuation doc — keep BOTH updated at each milestone.
+Long-form decision history lives in Claude's project memory (`hoptron-remake-decisions.md` + `user-devin-profile.md`); this file is the canonical continuation doc — keep BOTH updated at each milestone.
