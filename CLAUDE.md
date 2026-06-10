@@ -20,6 +20,33 @@ Browser remake of **Hoptron 5000 / SamuraiRobotBunny** (2015 Flash/AIR + Starlin
   - `assets/xml/Scenes.xml` — full cutscene dialogue script; `xml/` — game design data (copied to `public/data/`)
 - Typecheck: `npx tsc --noEmit`. No tests yet. Verify changes in the browser (claude-in-chrome) — JS-dispatch KeyboardEvents to drive the game; dev hooks below.
 
+## How to mine the original code (methodology for any new feature)
+
+1. **Find the spec**: use the Feature → Spec map below; for broad/unknown questions, spawn an Explore subagent (sonnet) over `D:\Dropbox\MyGames\SamuraiRobot2.0` instead of reading big files into main context.
+2. **Extract behavior, not structure**: constants, timings, anim names + chaining, state conditions, XML field usage. Re-architect cleanly in TS.
+3. **Verify visually** in the browser against expectations (and the animation viewer for anything animation-related).
+
+### Feature → Spec map
+
+| Feature | Original spec |
+|---|---|
+| Any boss fight | `com/characterclasses/Boss_<Name>.as` + `planning/*.txt` fight docs + per-boss fx sounds |
+| Enemy AI archetype | `com/characterclasses/<AIType>.as` (Mover/Bouncer/Shooter/... names match XML aiType) |
+| In-run shop / shopkeeper | `com/menuclasses/InGameShopManager.as` + `public/data/GameShop.xml` + LevelBase initGameShop:2157 |
+| AP meta-shop | `com/menuclasses/ShopManager.as` (595 ln) + ShopScreen.as |
+| Spell/magic behaviors | LevelBase magic functions ~9240–9880 (init_magic_*, magic_*) + `com/gameclasses/MagicPowerGame.as` |
+| Cutscenes/dialogue | `com/menuclasses/SceneManager.as` (876 ln) + `assets/xml/Scenes.xml` |
+| Achievements | `assets/xml/Achievements.xml` + AchievementHolder.as |
+| Animation-synced sounds | LevelBase initBunnySoundFX:7694 (AnimationSoundObject arrays per anim) |
+| Music selection | LevelBase getMusicTrack:1583 |
+| Save format ideas | LevelBase saveCurrentGame:10989 / MGC SharedObject fields |
+| Balloons/potions | LevelBase initPotions:1953, updateBalloon, checkLifeBalloonCollision |
+| Boss rush mode | BossModeSegments.xml + BossModeEnemies.xml + heart_scon |
+
+### LevelBase.as line-number index (12,499 lines — jump, don't scroll)
+
+constants 334–392 · initAllTheThings 1771 · initLevelGraphics 1858 (level→bg/atlas/scon) · initGUI 2010 · initGameShop 2157 · initBossHearts 2518 · initMagicBubbles 2587 · getEnemyFromXML 2830 (enemy factory) · initEnemies 3584 · spawn helpers 4721–4809 · handleStageTouch 4817 (old touch zones) · doBunnyJump 4995 · doBunnySlash 5087 · onAttackTouch 5140 · attackAgainTime 5184 (combo chaining) · checkAttackCollision 5510 · onEnemyHit 5828 · combo bar 5985 · segment/level transitions 6012–6886 · initBunny 7668 · initBunnySoundFX 7694 · keyPressed 7846 · updateAll 8141 · updateBunny 8180 · updateEnemies 8313 (contact dwell damage) · injureEnemy 8370 · injureBunny 8425 · magic powers 9240–9880 · saveCurrentGame 10989 · pause 11682–11906
+
 ## Architecture (`src/`)
 
 - `spriter/` — **the crown jewel**: `parseScon.ts` (SCON JSON → model), `playback.ts` (pure pose math, verbatim port), `SpriterPlayer.ts` (Pixi Container; playAnim w/ nextAnim chaining, callbacks, uninterruptable, reverse flag, sound triggers, `getPart(name)` for VFX/muzzle tracking).
