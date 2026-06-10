@@ -8,7 +8,16 @@
  * assume the original's 60fps step — the game loop runs a fixed 60Hz tick.
  */
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
+import { audio } from './Audio';
 import type { Input } from './Input';
+
+// per-combo-stage swing sounds (matches original onAttackTouch/attackAgainTime)
+const SWING_SOUNDS: string[][] = [
+  ['swipe1_01', 'swipe1_02', 'swipe1_03'],
+  ['swipe2_01', 'swipe2_02'],
+  ['swipe3_01'],
+  ['swipe4_01'],
+];
 
 // ---- original feel constants (LevelBase) ----
 export const GROUND_Y = 325;
@@ -86,6 +95,10 @@ export class PlayerController {
   private comboStage = -1;
   private comboTimer = 0;
   private attackQueued = false;
+  private throwCooldown = 0;
+
+  /** fired when a ninja star should spawn (x, y, dir) */
+  onThrow: ((x: number, y: number, dir: number) => void) | null = null;
 
   constructor(spriter: SpriterPlayer, input: Input) {
     this.spriter = spriter;
@@ -99,6 +112,7 @@ export class PlayerController {
   hurt(amount: number, knockDir: number): boolean {
     if (this.invincible || this.iframeTimer > 0 || this.dead) return false;
     this.hp -= amount;
+    audio.play('bunny_hurt');
     this.xVel = 6 * knockDir;
     this.yVel = -4;
     this.onGround = false;
@@ -108,6 +122,7 @@ export class PlayerController {
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
+      audio.play('you_died', 0.4);
       this.spriter.playAnim('die', 'die_idle', null, true, true);
       return true;
     }
@@ -229,6 +244,16 @@ export class PlayerController {
       return;
     }
 
+    // ninja star throw (doesn't change state — original isThrowing was a 200ms overlay)
+    this.throwCooldown = Math.max(0, this.throwCooldown - dt);
+    if (this.input.buffered('throw', 0.1) && this.throwCooldown <= 0) {
+      this.input.consumeBuffer('throw');
+      this.throwCooldown = 0.22;
+      const back = this.onGround ? (this.input.axisX !== 0 ? 'Run' : 'idle') : 'idle_air';
+      this.spriter.playAnim(this.onGround && this.input.axisX !== 0 ? 'Throw_Run' : 'Throw', back, null, true);
+      this.onThrow?.(this.x, this.y, this.facing);
+    }
+
     if (!this.onGround) {
       this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
     }
@@ -238,6 +263,7 @@ export class PlayerController {
 
   private doJump(double: boolean): void {
     this.jumpCutDone = false;
+    audio.play('jumpSound', double ? 0 : 0.05);
     if (double) {
       this.yVel = DOUBLE_JUMP_VELOCITY;
       this.jumpsUsed = 2;
@@ -289,6 +315,8 @@ export class PlayerController {
     this.xVel = stage.impulse * this.facing;
     this.spriter.playbackSpeed = stage.speed;
     this.spriter.playAnim(stage.anim, '', null, true);
+    if (this.comboStage === 0) audio.play('bunny_drawSword');
+    audio.playRandom(SWING_SOUNDS[this.comboStage], 0.02);
   }
 
   private exitAttack(): void {

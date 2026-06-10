@@ -1,17 +1,20 @@
 /**
- * Game shell — level 1 with wave-spawned enemies and full combat loop.
- * Fixed 60Hz simulation (the original's per-frame constants depend on it),
- * rendering at display rate.
+ * Game shell — all 6 adventure levels with wave-spawned enemies, loot,
+ * ninja stars, and full combat. Fixed 60Hz simulation (the original's
+ * per-frame constants depend on it), rendering at display rate.
  */
 import { Application, Assets, Container, Graphics, Point, Sprite, Text, Texture } from 'pixi.js';
-import { loadStarlingAtlas } from '../assets/starlingAtlas';
+import { loadStarlingAtlas, type TextureMap } from '../assets/starlingAtlas';
 import { parseScon } from '../spriter/parseScon';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
-import { loadEnemyTypes, loadSegments } from './data/levelData';
+import { audio } from './Audio';
+import { loadEnemyTypes, loadSegments, type LevelEnemies, type Segment } from './data/levelData';
 import { Enemy } from './Enemy';
 import { Input } from './Input';
 import { Hitstop, ParticleBursts, ScreenShake } from './Juice';
-import { PlayerController, GROUND_Y } from './PlayerController';
+import { NinjaStars } from './NinjaStars';
+import { Pickups } from './Pickups';
+import { PlayerController } from './PlayerController';
 import { SwipeTrail } from './SwipeTrail';
 import { WaveManager } from './WaveManager';
 
@@ -23,6 +26,33 @@ const SWORD_PART = 'Bunny_Sword1';
 const SWORD_TIP_LOCAL_X = -153; // blade extends from the hilt pivot (0,0) to local (-153, 0)
 const SWORD_DAMAGE = 30; // original BUNNY_DEFAULT_DMG_SWORD
 const ENEMY_HIT_RADIUS = 42; // approximate enemy body radius at 0.55 scale
+const STARTING_STARS = 30; // one original "Ninja Star Pack"
+
+interface LevelDef {
+  bg: string;
+  scon: string;
+  atlas: string;
+  category: string;
+  music: string;
+}
+
+// original initLevelGraphics: 11 adventure levels, two per food world
+// (level 11, the Magic Man fight, comes later with the boss system)
+function worldPair(bg: string, scon: string, atlas: string, category: string, track: string): LevelDef[] {
+  return [
+    { bg, scon, atlas, category, music: track },
+    { bg, scon, atlas, category, music: `${track}-2` },
+  ];
+}
+
+const LEVELS: LevelDef[] = [
+  ...worldPair('level01', 'fruit_scon', 'enemies/fruit/fruit_enemies-hd', 'fruit', 'track_01'),
+  ...worldPair('level02', 'veg_scon', 'enemies/veg/veg_enemies-hd', 'veg', 'track_02'),
+  ...worldPair('level03', 'dessert_scon', 'enemies/dessert/dessert_enemies-hd', 'dessert', 'track_03'),
+  ...worldPair('level04', 'asian_scon', 'enemies/asian/asian_enemies-hd', 'asian', 'track_04'),
+  ...worldPair('level05', 'ffood_scon', 'enemies/ffood/ffood_enemies-hd', 'ffood', 'track_05'),
+  { bg: 'level06', scon: 'final_scon', atlas: 'enemies/final/final_enemies-hd', category: 'final', music: 'track_06' },
+];
 
 export async function startGame(root: HTMLElement): Promise<void> {
   root.innerHTML = '';
@@ -40,59 +70,132 @@ export async function startGame(root: HTMLElement): Promise<void> {
   fit();
   window.addEventListener('resize', fit);
 
-  // ---- load level 1 assets + data ----
-  const [bgTexture, bunnyScon, bunnyAtlas, fruitScon, fruitAtlas, enemyLevels, segmentLevels] = await Promise.all([
-    Assets.load<Texture>('assets/textures/stages/level01.jpg'),
+  // ---- shared assets + design data ----
+  const [bunnyScon, bunnyAtlas, effectsAtlas, enemyLevels, segmentLevels] = await Promise.all([
     fetch('assets/scml/bunny_scon.scon').then((r) => r.json()),
     loadStarlingAtlas('assets/textureAtlas/bunny/TA_Bunny-hd.xml'),
-    fetch('assets/scml/fruit_scon.scon').then((r) => r.json()),
-    loadStarlingAtlas('assets/textureAtlas/enemies/fruit/fruit_enemies-hd.xml'),
+    loadStarlingAtlas('assets/textureAtlas/effects/effectAtlas-hd.xml'),
     loadEnemyTypes(),
     loadSegments(),
   ]);
+  const typesByCategory = new Map<string, LevelEnemies>(enemyLevels.map((l) => [l.foodCategory, l]));
 
+  // ---- display tree ----
   const shakeRoot = new Container();
   app.stage.addChild(shakeRoot);
-
   const world = new Container();
   shakeRoot.addChild(world);
 
-  const bg = new Sprite(bgTexture);
+  const bg = new Sprite();
   bg.width = STAGE_W;
   bg.height = STAGE_H;
   world.addChild(bg);
 
   const enemyLayer = new Container();
-  world.addChild(enemyLayer);
-
+  const lootLayer = new Container();
   const characterLayer = new Container();
-  world.addChild(characterLayer);
-
   const effectsLayer = new Container();
-  world.addChild(effectsLayer);
+  world.addChild(enemyLayer, lootLayer, characterLayer, effectsLayer);
 
   const bunnySpriter = new SpriterPlayer('bunny', parseScon(bunnyScon), bunnyAtlas);
   characterLayer.addChild(bunnySpriter);
 
   const swipeTrail = new SwipeTrail();
-  effectsLayer.addChild(swipeTrail);
   const bursts = new ParticleBursts();
-  effectsLayer.addChild(bursts);
+  effectsLayer.addChild(swipeTrail, bursts);
+
+  const pickups = new Pickups(effectsAtlas);
+  lootLayer.addChild(pickups);
+  const stars = new NinjaStars(effectsAtlas);
+  effectsLayer.addChild(stars);
 
   const input = new Input();
   const player = new PlayerController(bunnySpriter, input);
   const shake = new ScreenShake(shakeRoot);
   const hitstop = new Hitstop();
 
-  const fruitData = parseScon(fruitScon);
-  const fruitTypes = enemyLevels[0].types;
-  let wave = new WaveManager(segmentLevels[0], fruitTypes, fruitData, fruitAtlas, enemyLayer);
+  audio.loadFx([
+    'bunny_drawSword', 'jumpSound', 'bunny_hurt', 'you_died', 'slide_to_stop',
+    'swipe1_01', 'swipe1_02', 'swipe1_03', 'swipe2_01', 'swipe2_02', 'swipe3_01', 'swipe4_01',
+    'enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03', 'pickup_coin_silver', 'pickup_coin_gold',
+  ]);
+
+  // ---- run state ----
+  let levelIndex = 0;
   let score = 0;
+  let coins = 0;
+  let starAmmo = STARTING_STARS;
+  let wave: WaveManager | null = null;
+  let levelClearTimer = 0;
+  let gameComplete = false;
+
+  pickups.onCoins = (amount) => {
+    coins += amount;
+    audio.play(amount >= 8 ? 'pickup_coin_gold' : 'pickup_coin_silver', 0, 0.5);
+  };
+  pickups.onHeal = (fraction) => {
+    player.hp = Math.min(player.maxHp, player.hp + player.maxHp * fraction);
+  };
+  player.onThrow = (x, y, dir) => {
+    if (starAmmo <= 0) return;
+    starAmmo--;
+    audio.play('swipe1_02', 0, 0.4);
+    stars.throw_(x, y, dir);
+  };
+  stars.onHit = (enemy, killed) => {
+    audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
+    if (killed) onEnemyKilled(enemy);
+  };
+
+  function onEnemyKilled(enemy: Enemy): void {
+    wave?.onKill();
+    score += enemy.type.pointsAward;
+    bursts.burst(enemy.x, enemy.y, enemy.type.deathPS);
+    pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
+  }
+
+  // ---- level loading ----
+  const sconCache = new Map<string, { data: ReturnType<typeof parseScon>; textures: TextureMap }>();
+
+  async function loadLevel(n: number): Promise<void> {
+    const def = LEVELS[n];
+    levelClearTimer = 0;
+
+    // detach the old wave FIRST so the ticker stops updating it during the async load
+    const old = wave;
+    wave = null;
+    if (old) {
+      for (const e of old.enemies) {
+        e.spriter.parent?.removeChild(e.spriter);
+        e.spriter.destroy();
+      }
+      old.enemies.length = 0;
+    }
+    pickups.clear();
+    stars.clear();
+
+    let cached = sconCache.get(def.scon);
+    if (!cached) {
+      const [sconJson, textures] = await Promise.all([
+        fetch(`assets/scml/${def.scon}.scon`).then((r) => r.json()),
+        loadStarlingAtlas(`assets/textureAtlas/${def.atlas}.xml`),
+      ]);
+      cached = { data: parseScon(sconJson), textures };
+      sconCache.set(def.scon, cached);
+    }
+    bg.texture = await Assets.load<Texture>(`assets/textures/stages/${def.bg}.jpg`);
+
+    const types = typesByCategory.get(def.category)!.types;
+    if (levelIndex !== n) return; // a newer load superseded this one
+    wave = new WaveManager(segmentLevels[n], types, cached.data, cached.textures, enemyLayer);
+    audio.playMusic(def.music, 1.5);
+    levelText.text = `Level ${n + 1}`;
+    levelText.alpha = 1;
+  }
 
   // ---- sword swing tracking ----
   const hiltLocal = new Point(0, 0);
   const tipLocal = new Point(SWORD_TIP_LOCAL_X, 0);
-  let swingId = 0;
   let lastComboStage = -1;
   const hitThisSwing = new Set<Enemy>();
 
@@ -105,14 +208,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
   }
 
   function combatTick(): void {
-    // detect new swing for the once-per-swing hit set
+    if (!wave) return;
     const stage = player.state === 'attack' ? player.comboStageIndex : -1;
     if (stage !== lastComboStage) {
       lastComboStage = stage;
-      if (stage >= 0) {
-        swingId++;
-        hitThisSwing.clear();
-      }
+      if (stage >= 0) hitThisSwing.clear();
     }
 
     const sword = bunnySpriter.getPart(SWORD_PART);
@@ -121,21 +221,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
       const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
       swipeTrail.addSample(hilt, tip);
 
-      // sword vs enemies
       for (const enemy of wave.enemies) {
         if (!enemy.alive || enemy.invincible || hitThisSwing.has(enemy)) continue;
-        const cx = enemy.x;
-        const cy = enemy.y - 35; // body center above feet
-        if (distToSegment(cx, cy, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
+        if (distToSegment(enemy.x, enemy.y - 35, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
           hitThisSwing.add(enemy);
-          const killed = enemy.hurt(SWORD_DAMAGE, player.facing);
+          const wasAlive = enemy.alive;
+          enemy.hurt(SWORD_DAMAGE, player.facing);
+          audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
           hitstop.freeze(0.05);
-          shake.add(enemy.hp <= 0 ? 5 : 2.5);
-          if (killed && !enemy.alive) {
-            wave.onKill();
-            score += enemy.type.pointsAward;
-            bursts.burst(enemy.x, enemy.y, enemy.type.deathPS);
-          }
+          shake.add(!enemy.alive ? 5 : 2.5);
+          if (wasAlive && !enemy.alive) onEnemyKilled(enemy);
         }
       }
     } else {
@@ -170,55 +265,77 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   const hpBack = new Graphics().roundRect(10, 10, 154, 16, 4).fill({ color: 0x000000, alpha: 0.55 });
   const hpBar = new Graphics();
-  const scoreText = new Text({ text: 'Score 0', style: { fontFamily: 'Verdana', fontSize: 13, fill: 0xffffff, fontWeight: 'bold' } });
+  const scoreText = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 13, fill: 0xffffff, fontWeight: 'bold' } });
   scoreText.position.set(180, 10);
   const waveText = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 11, fill: 0xcccccc } });
   waveText.position.set(10, 30);
-  hud.addChild(hpBack, hpBar, scoreText, waveText);
 
-  const deathText = new Text({
-    text: 'YOU DIED\npress R / Start to respawn',
-    style: { fontFamily: 'Verdana', fontSize: 28, fill: 0xff5555, fontWeight: 'bold', align: 'center' },
-  });
-  deathText.anchor.set(0.5);
-  deathText.position.set(STAGE_W / 2, STAGE_H / 2 - 40);
-  deathText.visible = false;
-  hud.addChild(deathText);
+  const coinIcon = new Sprite(effectsAtlas.get('Coin_Gold'));
+  coinIcon.position.set(640, 8);
+  coinIcon.scale.set(0.7);
+  const coinText = new Text({ text: '0', style: { fontFamily: 'Verdana', fontSize: 13, fill: 0xffe066, fontWeight: 'bold' } });
+  coinText.position.set(666, 10);
+  const starIcon = new Sprite(effectsAtlas.get('NinjaStar'));
+  starIcon.position.set(720, 8);
+  starIcon.scale.set(0.6);
+  const starText = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 13, fill: 0xffffff, fontWeight: 'bold' } });
+  starText.position.set(748, 10);
 
-  const winText = new Text({
-    text: 'LEVEL CLEAR!',
-    style: { fontFamily: 'Verdana', fontSize: 36, fill: 0xffe066, fontWeight: 'bold', align: 'center' },
-  });
-  winText.anchor.set(0.5);
-  winText.position.set(STAGE_W / 2, STAGE_H / 2 - 60);
-  winText.visible = false;
-  hud.addChild(winText);
+  const levelText = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 30, fill: 0xffffff, fontWeight: 'bold' } });
+  levelText.anchor.set(0.5);
+  levelText.position.set(STAGE_W / 2, 90);
+
+  const centerText = new Text({ text: '', style: { fontFamily: 'Verdana', fontSize: 30, fill: 0xffe066, fontWeight: 'bold', align: 'center' } });
+  centerText.anchor.set(0.5);
+  centerText.position.set(STAGE_W / 2, STAGE_H / 2 - 50);
+
+  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText);
 
   function drawHud(): void {
     const ratio = Math.max(0, player.hp / player.maxHp);
     hpBar.clear();
     hpBar.roundRect(12, 12, 150 * ratio, 12, 3).fill({ color: ratio > 0.35 ? 0x4dff6a : 0xff4d4d });
     scoreText.text = `Score ${score}`;
-    waveText.text = wave.levelComplete
-      ? `cleared! kills: ${wave.totalKills}`
-      : `wave ${Math.max(0, wave.segmentIndex) + 1}  ·  kills ${wave.killsThisSegment}/${wave.currentQuota || '–'}`;
-    deathText.visible = player.dead;
-    winText.visible = wave.levelComplete;
+    coinText.text = String(coins);
+    starText.text = String(starAmmo);
+    if (wave) {
+      waveText.text = wave.levelComplete
+        ? ''
+        : `wave ${Math.max(0, wave.segmentIndex) + 1}  ·  kills ${wave.killsThisSegment}/${wave.currentQuota || '–'}`;
+    }
+    if (player.dead) {
+      centerText.text = 'YOU DIED\npress R / Start to retry';
+      centerText.style.fill = 0xff5555;
+    } else if (gameComplete) {
+      centerText.text = `GAME COMPLETE!\nscore ${score}`;
+      centerText.style.fill = 0xffe066;
+    } else if (wave?.levelComplete) {
+      centerText.text = 'LEVEL CLEAR!';
+      centerText.style.fill = 0xffe066;
+    } else {
+      centerText.text = '';
+    }
+    if (levelText.alpha > 0) levelText.alpha -= 0.005;
+  }
+
+  function restart(): void {
+    score = 0;
+    coins = 0;
+    starAmmo = STARTING_STARS;
+    gameComplete = false;
+    player.respawn(400);
+    void loadLevel(levelIndex);
   }
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && player.dead) restart();
   });
 
-  function restart(): void {
-    for (const e of wave.enemies) {
-      e.spriter.parent?.removeChild(e.spriter);
-      e.spriter.destroy();
-    }
-    wave = new WaveManager(segmentLevels[0], fruitTypes, fruitData, fruitAtlas, enemyLayer);
-    score = 0;
-    player.respawn(400);
-  }
+  // dev hook: jump to a level from the console
+  (window as any).__gotoLevel = (n: number) => {
+    levelIndex = Math.max(0, Math.min(LEVELS.length - 1, n - 1));
+    void loadLevel(levelIndex);
+  };
 
   // ---- fixed-timestep loop ----
   let accumulator = 0;
@@ -230,15 +347,34 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
       if (hitstop.update(FIXED_DT)) {
         input.postUpdate();
-        continue; // world frozen for impact
+        continue;
       }
 
       if (player.dead && input.justPressed('pause')) restart();
 
       player.update(FIXED_DT);
-      wave.update(FIXED_DT, player);
-      combatTick();
-      wave.cleanup();
+      if (wave) {
+        wave.update(FIXED_DT, player);
+        combatTick();
+        wave.cleanup();
+        stars.update(wave.enemies);
+
+        // level progression
+        if (wave.levelComplete && !gameComplete) {
+          levelClearTimer += FIXED_DT;
+          if (levelClearTimer > 3.5) {
+            if (levelIndex + 1 < LEVELS.length) {
+              levelIndex++;
+              player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+              void loadLevel(levelIndex);
+            } else {
+              gameComplete = true;
+              audio.playMusic('afterboss', 1);
+            }
+          }
+        }
+      }
+      pickups.update(FIXED_DT, player.x, player.y);
       swipeTrail.update(FIXED_DT);
       bursts.update(FIXED_DT);
       shake.update(FIXED_DT);
@@ -246,4 +382,6 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
     drawHud();
   });
+
+  await loadLevel(0);
 }
