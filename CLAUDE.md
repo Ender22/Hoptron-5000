@@ -107,10 +107,10 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] bossWarning ids RESOLVED: 0/1 per world pair; 2=burrito (lvl 11), 3=magicman (lvl 12). Final bosses are enemyTypes not <boss> elements → spawnBoss falls back to BOSS_ID_NAMES lookup. loadLevel drops post-boss leftover segments (lvl 12 data had a trailing magicman wave).
 - [ ] Fidelity follow-ups: Magic Man DUO (partner + highfive + fart + KO smash sequences), Sundae projectile slash-back (orig mechanic; both real + burrito form), Hamburger heart HP tuning, Cake candle positions (use rig points if present), Combo break thresholds quartered vs original 1000/2000-HP steps, burrito intro/death cutscenes (Phase F).
 
-### Phase D — Run economy & shops
+### Phase D — Run economy & shops (spec mined → `notes/phase-d-spec.md` — read it first)
 
-- [ ] Shopkeeper segments (shopkeeper_scon exists): pause wave, shop UI from `public/data/GameShop.xml` — armor tiers (absorb until break; original equipArmorTime), chi enhancers, dodge shoes (auto-dodge %), health/invince potion spawns, star packs, health carrot. Coins = currency.
-- [ ] Reward chest segments (chest open + coin shower).
+- [ ] Shopkeeper segments: full spec in notes/phase-d-spec.md (items/prices/effects/anims/sounds). Player needs new stat fields: armor pool, dmgResistance, luck, dodge.
+- [x] Reward chest segments (commit 418f3b2): WaveManager.needsChest → Game chest drop/open/coin-shower, level-scaled loot. **NEEDS BROWSER VERIFY** (Chrome window was hidden when built — fast-forward level 1 w/ kill-alls to segment w/ chest; watch for the [wave] CHEST log).
 - [ ] Health/invincibility balloons + potions (original balloon mechanic).
 - [ ] Post-level score screen (kills/score/AP tally; original gotoScoreScreen) + Awesomeness Points.
 - [ ] Permanent AP meta-shop on title (ShopManager.as spec): sword dmg, max HP, slash upgrades, ninja star capacity, and SPELL UNLOCK/LEVELING (levels shorten cooldown / boost effect). Gate the 8 spells behind unlocks (currently all free) — store in SaveData.
@@ -150,6 +150,7 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - **Git identity**: machine's global git config is his WORK account — this repo is locally pinned to personal (Ender22 + noreply email). Never change `user.email` here; remote is `github.com/Ender22/Hoptron-5000`.
 - **Dev server**: may already be running on :5173 from a previous session — check before starting another.
 - **Browser testing technique**: drive the game by JS-dispatching `KeyboardEvent`s (keydown without keyup = hold); screenshots' DPI scale flip-flops, so click via element refs (`find` tool) or JS instead of coordinates; console hooks + `read_console_messages` with a pattern.
+- **HIDDEN-WINDOW TRAP**: if the game appears frozen (bunny stuck in a pose, no enemies, level text never fades) with NO console errors — check `document.hidden` first. Chrome pauses rAF for hidden/occluded windows; screenshots still capture but the sim doesn't run. Probe: count rAF frames over 1s via JS. Wasted 20 minutes chasing a phantom regression on this (2026-06-11 ~1am).
 - **Animation questions** → use the viewer (`/?viewer`) before writing code; it's the fastest fidelity check.
 - **PowerShell hazard**: `Set-Content` after regex-replace mangles unicode (em-dashes) in source files — use the Edit tool or ASCII.
 - Never port: arena mode (dead server), Vungle ads, IAP, profiles (single localStorage save replaces them). Stretch idea (user-approved someday-maybe): the 10 local arena rule/segment XMLs could become an offline "challenge mode".
