@@ -59,7 +59,12 @@ const LEVELS: LevelDef[] = [
   ...worldPair('level04', 'asian_scon', 'enemies/asian/asian_enemies-hd', 'asian', 'track_04'),
   ...worldPair('level05', 'ffood_scon', 'enemies/ffood/ffood_enemies-hd', 'ffood', 'track_05'),
   { bg: 'level06', scon: 'final_scon', atlas: 'enemies/final/final_enemies-hd', category: 'final', music: 'track_06' },
+  // level 12: the Magic Man fight (original level 11, segments index 11, category "mm")
+  { bg: 'level06', scon: 'magicMan_Fight_scon', atlas: 'magicman/TA_Magicman-hd', category: 'mm', music: 'track_07' },
 ];
+
+// the final-world bossWarning ids map to named enemyTypes, not <boss> elements
+const BOSS_ID_NAMES: Record<number, string> = { 2: 'burrito', 3: 'magicman' };
 
 export async function startGame(root: HTMLElement): Promise<void> {
   root.innerHTML = '';
@@ -291,8 +296,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
     bossLoading = true;
     try {
       const def = LEVELS[levelIndex];
-      const bossList = typesByCategory.get(def.category)?.bosses ?? [];
-      const type = bossList[Math.min(bossId, bossList.length - 1)];
+      const levelTypes = typesByCategory.get(def.category);
+      const bossList = levelTypes?.bosses ?? [];
+      const type = bossList[Math.min(bossId, bossList.length - 1)] ?? levelTypes?.types.get(BOSS_ID_NAMES[bossId] ?? '');
       if (!type) {
         console.warn(`[boss] no boss ${bossId} for ${def.category}`);
         wave.levelComplete = true;
@@ -328,7 +334,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
       boss.spawnAt(620, type.effectedByGravity ? 0 : 160); // drops in / flies in
       enemyLayer.addChild(spriter);
       wave.bossSpawned(boss);
-      audio.playMusic(levelIndex % 2 === 0 ? 'bosstrack_01' : 'bosstrack_02', 1);
+      audio.playMusic(bossId === 3 ? 'track_07' : bossId === 2 ? 'bosstrack_01' : levelIndex % 2 === 0 ? 'bosstrack_01' : 'bosstrack_02', 1);
       console.log(`[boss] ${type.name} spawned (hp ${type.hp})`);
     } finally {
       bossLoading = false;
@@ -371,7 +377,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
     if (levelIndex !== n) return; // a newer load superseded this one
     enemyShots.setTextures(cached.textures);
-    wave = new WaveManager(segmentLevels[n], typesByCategory.get(def.category)!, cached.data, cached.textures, enemyLayer, enemyServices);
+    // drop trailing post-boss segments (level 12's data has a leftover magicman wave)
+    const segs = segmentLevels[n];
+    const bossIdx = segs.findIndex((s) => s.boss !== null);
+    const useSegs = bossIdx >= 0 ? segs.slice(0, bossIdx + 1) : segs;
+    wave = new WaveManager(useSegs, typesByCategory.get(def.category)!, cached.data, cached.textures, enemyLayer, enemyServices);
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
     levelText.alpha = 1;

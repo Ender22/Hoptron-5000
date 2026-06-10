@@ -47,6 +47,7 @@ export function createEnemy(type: EnemyType, spriter: SpriterPlayer): Enemy {
     case 'PowerSwat':
       return new PowerSwat(type, spriter);
     case 'Candle':
+    case 'Burrito_Candle':
     case 'HamburgerHeart':
       return new AttachedMinion(type, spriter);
     case 'Note':

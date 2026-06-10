@@ -37,6 +37,10 @@ export function createBoss(type: EnemyType, spriter: SpriterPlayer): Boss {
       return new HamburgerBoss(type, spriter);
     case 'Boss_Combo':
       return new ComboBoss(type, spriter);
+    case 'Boss_Burrito':
+      return new BurritoBoss(type, spriter);
+    case 'Boss_MagicMan':
+      return new MagicManBoss(type, spriter);
     default:
       return new Boss(type, spriter);
   }
@@ -2394,5 +2398,835 @@ class ComboBoss extends Boss {
   protected onDeath(): void {
     super.onDeath();
     this.clearPieces();
+  }
+}
+
+// ---------------------------------------------------------------------------
+/**
+ * Boss_Burrito — the final food boss (condensed port of the 3,122-line
+ * original). One rig, ten forms: it transforms through every prior boss as
+ * its HP drops, via changeToX animations at fixed HP thresholds. Each form
+ * runs a small action loop borrowing that boss's signature moves; Durian
+ * form regrows PowerSwats, Cake form regrows candles, Sundae form must be
+ * pummeled through its guard.
+ */
+interface BurritoPhase {
+  key: string;
+  minHp: number;
+  idle: string;
+  change: string;
+  hurt: string;
+  actions: string[];
+}
+
+const BURRITO_PHASES: BurritoPhase[] = [
+  { key: 'watermelon', minHp: 16500, idle: 'idle_watermelon', change: 'changeToWatermelon', hurt: 'water_hurt', actions: ['w_attack', 'w_jump', 'w_shoot', 'w_attack', 'w_jump', 'w_shoot'] },
+  { key: 'durian', minHp: 14500, idle: 'idle_durian', change: 'changeToDurian', hurt: 'dur_hurt', actions: ['dur_spin', 'dur_spin', 'dur_slam', 'rest'] },
+  { key: 'eggplant', minHp: 13000, idle: 'idle_eggplant', change: 'changeToEggplant', hurt: 'egg_hurt', actions: ['egg_onetwo', 'egg_onetwo', 'egg_turnpunch', 'rest'] },
+  { key: 'pumpkin', minHp: 11500, idle: 'idle_pumpkin', change: 'changeToPumpkin', hurt: 'pumpkin_hurt', actions: ['pk_flyslash', 'pk_slash', 'rest', 'pk_slash'] },
+  { key: 'sundae', minHp: 9500, idle: 'idle_sundae', change: 'changeToSundae', hurt: 'sundae_hurt', actions: ['su_throw', 'su_throw', 'su_charge'] },
+  { key: 'cake', minHp: 7500, idle: 'idle_cake', change: 'changeToCake', hurt: 'cake_hurt', actions: ['ck_shoot2x2', 'ck_shoot4', 'ck_flyup', 'ck_shoot2x2', 'ck_sing'] },
+  { key: 'noodles', minHp: 5500, idle: 'idle_noodles', change: 'changeToNoodles', hurt: 'noodles_hurt', actions: ['nd_slash', 'nd_combo', 'nd_slash', 'nd_super'] },
+  { key: 'sushi', minHp: 3500, idle: 'idle_sushi', change: 'changeToSushi', hurt: 'sushi_hurt', actions: ['sh_smash', 'sh_fish', 'sh_fwdblast', 'sh_blast'] },
+  { key: 'hamburger', minHp: 3000, idle: 'idle_hamburger', change: 'changeToHamburger', hurt: 'ham_hurt', actions: ['hm_shoot360', 'hm_shoot'] },
+  { key: 'combo', minHp: -999999, idle: 'idle_combo', change: 'changeToCombo', hurt: 'combo_hurt', actions: ['cb_smash', 'cb_kick', 'cb_stomp', 'cb_nugget'] },
+];
+
+class BurritoBoss extends Boss {
+  private phaseIndex = -1;
+  private actionIndex = 0;
+  private actionTimer = 0;
+  private mode: 'idle' | 'approach' | 'charge' | 'stomp' | 'flyup' | 'spin' = 'idle';
+  private chargeDir = 1;
+  private chargeStopAt = 0;
+  private approachRange = 150;
+  private approachThen = '';
+  private swats: PowerSwat[] = [];
+  private swatsLeft = 0;
+  private candlesLeft = 0;
+  private guarded = false;
+  private blockedHits = 0;
+  private busyChange = false;
+
+  private get form(): BurritoPhase {
+    return BURRITO_PHASES[Math.max(0, this.phaseIndex)];
+  }
+
+  spawnAt(x: number, _y: number): void {
+    Enemy.prototype.spawnAt.call(this, x, GROUND_Y);
+    this.invincible = true;
+    this.canDamage = false;
+    this.faceOverride = -1;
+    if (this.spriter.hasAnim('spawn')) this.spriter.playAnim('spawn', 'spawn_idle', null, true);
+    audio.play('boss_is_coming', 0, 0.5);
+    this.after(3.5, () => this.nextPhase());
+  }
+
+  private nextPhase(): void {
+    if (!this.alive) return;
+    this.phaseIndex = Math.min(this.phaseIndex + 1, BURRITO_PHASES.length - 1);
+    const p = this.form;
+    this.clearDelayed();
+    this.mode = 'idle';
+    this.actionIndex = 0;
+    this.busyChange = true;
+    this.invincible = true;
+    this.canDamage = false;
+    this.guarded = false;
+    this.blockedHits = 0;
+    this.flying = false;
+    this.canGoOffScreen = false;
+    this.xVel = 0;
+    this.yVel = 0;
+    this.clearMinions();
+    audio.play('boss_killed', 0, 0.5);
+    this.spriter.playAnim(p.change, p.idle, null, true, true);
+    this.after(1.6, () => {
+      this.busyChange = false;
+      this.invincible = false;
+      this.canDamage = true;
+      // phase entry hooks
+      if (p.key === 'durian') this.spawnSwats();
+      if (p.key === 'cake') this.spawnCandles();
+      if (p.key === 'sundae') this.guarded = true;
+      if (this.guarded || this.swatsLeft > 0 || this.candlesLeft > 0) this.invincible = true;
+      this.actionTimer = 1.2;
+    });
+  }
+
+  private clearMinions(): void {
+    for (const s of this.swats) {
+      if (s.alive) {
+        s.suicided = true;
+        s.alive = false;
+        s.spriter.visible = false;
+      }
+    }
+    this.swats = [];
+    this.swatsLeft = 0;
+    this.candlesLeft = 0;
+  }
+
+  private spawnSwats(): void {
+    this.swats = [];
+    this.swatsLeft = 0;
+    for (const offX of [-110, 110]) {
+      const swat = this.services?.spawnChild('swat', this.x + offX, this.y - 110, 0, 0);
+      if (swat instanceof PowerSwat) {
+        swat.attachTo(this, offX, -110);
+        swat.onDestroyed = () => {
+          this.swatsLeft--;
+          if (this.swatsLeft <= 0) this.guardBroken('dur_powerlost', 'dur_powerlost_idle', 'dur_recover');
+        };
+        this.swats.push(swat);
+        this.swatsLeft++;
+      }
+    }
+  }
+
+  private spawnCandles(): void {
+    this.candlesLeft = 0;
+    for (const offX of [-50, 0, 50]) {
+      const c = this.services?.spawnChild('candle', this.x + offX, this.y - 170, 0, 0);
+      if (c instanceof AttachedMinion) {
+        c.attachTo(this, offX, -170);
+        c.onDestroyed = () => {
+          this.candlesLeft--;
+          if (this.candlesLeft <= 0) this.guardBroken('cake_get_stunned', 'cake_stunned_idle', 'cake_recover');
+        };
+        this.candlesLeft++;
+      }
+    }
+  }
+
+  /** open the vulnerability window (durian/cake/sundae forms) */
+  private guardBroken(stunAnim: string, stunIdle: string, recoverAnim: string): void {
+    if (!this.alive) return;
+    this.clearDelayed();
+    this.mode = 'idle';
+    this.invincible = false;
+    this.canDamage = false;
+    this.guarded = false;
+    this.xVel = 0;
+    this.yVel = 0;
+    this.flying = false;
+    this.canGoOffScreen = false;
+    this.x = Math.max(60, Math.min(740, this.x));
+    audio.play('durian_powerLoss', 0, 0.7);
+    this.spriter.playAnim(stunAnim, stunIdle, null, true, true);
+    this.actionTimer = 9999;
+    this.after(4.5, () => {
+      if (!this.alive || this.busyChange) return;
+      this.invincible = true;
+      this.canDamage = true;
+      this.spriter.playAnim(recoverAnim, this.form.idle, null, true, true);
+      const p = this.form;
+      if (p.key === 'durian') this.after(1.5, () => this.spawnSwats());
+      if (p.key === 'cake') this.after(1.5, () => this.spawnCandles());
+      if (p.key === 'sundae') this.guarded = true;
+      this.actionTimer = 2;
+    });
+  }
+
+  protected onBlockedHit(): void {
+    if (this.guarded && this.form.key === 'sundae') {
+      this.blockedHits++;
+      if (this.blockedHits >= 5) {
+        this.blockedHits = 0;
+        this.guardBroken('sundae_get_stunned', 'sundae_stunned_idle', 'sundae_recover');
+      }
+    }
+  }
+
+  protected onHurt(): void {
+    if (this.hp > 0 && this.hp < this.form.minHp && !this.busyChange) {
+      this.nextPhase();
+      return;
+    }
+    if (this.spriter.currentAnimationName === this.form.idle) {
+      this.spriter.playAnim(this.form.hurt, this.form.idle, null, true);
+    }
+  }
+
+  protected runAI(dt: number, player: PlayerView): void {
+    this.tickDelayed(dt);
+    const t = this.type;
+    if (this.busyChange) {
+      this.xVel *= 0.85;
+      return;
+    }
+    if ((this.swatsLeft > 0 || this.candlesLeft > 0 || this.guarded) && this.spriter.currentAnimationName !== 'sundae_stunned_idle') {
+      this.invincible = true;
+    }
+
+    switch (this.mode) {
+      case 'approach': {
+        this.faceOverride = player.x < this.x ? -1 : 1;
+        if (Math.abs(player.x - this.x) > this.approachRange) {
+          const moveAnim = this.form.key === 'noodles' ? 'noodles_run' : this.form.key === 'combo' ? 'combo_walk' : this.form.idle;
+          this.play(moveAnim);
+          this.xVel = Math.max(-8, Math.min(8, this.xVel + 0.6 * this.faceOverride));
+        } else {
+          this.mode = 'idle';
+          this.xVel *= 0.2;
+          this.execute(this.approachThen, player);
+        }
+        return;
+      }
+      case 'charge':
+        this.xVel = this.chargeDir * Math.max(10, t.maxMovementSpeed);
+        if ((this.chargeDir > 0 && this.x >= this.chargeStopAt) || (this.chargeDir < 0 && this.x <= this.chargeStopAt)) {
+          this.mode = 'idle';
+          this.canDamage = true;
+          this.xVel = 0;
+          this.canGoOffScreen = false;
+          this.x = Math.max(-20, Math.min(820, this.x));
+          this.play(this.form.idle);
+          this.actionTimer = 1;
+        }
+        return;
+      case 'stomp': {
+        this.canDamage = true;
+        this.xVel = Math.max(-t.maxMovementSpeed, Math.min(t.maxMovementSpeed, this.xVel + t.acceleration * this.chargeDir));
+        if ((this.chargeDir > 0 && this.x > 680) || (this.chargeDir < 0 && this.x < 100)) {
+          this.mode = 'idle';
+          this.xVel = 0;
+          this.play(this.form.idle);
+          this.actionTimer = 0.6;
+        }
+        return;
+      }
+      case 'flyup':
+        if (this.y < -180) {
+          this.mode = 'idle';
+          this.x = player.x < 400 ? 350 : 450;
+          this.y = -20;
+          this.flying = false;
+          this.yVel = 10;
+          this.canDamage = true;
+          this.spriter.playAnim('cake_slamdown', this.form.idle, null, true);
+          this.services?.shake(5);
+          this.actionTimer = 1.2;
+        }
+        return;
+      case 'spin':
+        this.yVel += t.acceleration;
+        if (this.y >= GROUND_Y) {
+          this.y = GROUND_Y;
+          this.yVel = 0;
+          this.xVel = 0;
+          this.mode = 'idle';
+          audio.play('durian_hitGround', 0, 0.7);
+          this.services?.shake(4);
+          this.spriter.playAnim('dur_spinslam', this.form.idle, null, true);
+          this.actionTimer = 1.2;
+        }
+        return;
+    }
+
+    this.xVel *= 0.85;
+    this.faceOverride = player.x < this.x ? -1 : 1;
+    this.actionTimer -= dt;
+    if (this.actionTimer <= 0) {
+      const action = this.form.actions[this.actionIndex];
+      this.actionIndex = (this.actionIndex + 1) % this.form.actions.length;
+      this.actionTimer = 9999;
+      this.execute(action, player);
+    }
+  }
+
+  private def(id: number): ProjectileType | null {
+    return this.projectileMap?.get(id) ?? null;
+  }
+
+  private aimedShot(defId: number, speed: number, player: PlayerView, sy = -80, opts: { scale?: number; rotSpeed?: number } = {}): void {
+    const d = this.def(defId);
+    if (!d || !this.services) return;
+    audio.play('projectileShot', 0, 0.5);
+    const sx = this.x + 40 * (this.faceOverride ?? 1);
+    const dx = player.x - sx;
+    const dy = player.y - 30 - (this.y + sy);
+    const len = Math.max(1, Math.hypot(dx, dy));
+    this.services.shoot(d, sx, this.y + sy, (dx / len) * speed, (dy / len) * speed, opts);
+  }
+
+  private execute(action: string, player: PlayerView): void {
+    const dir = this.faceOverride ?? 1;
+    switch (action) {
+      case 'rest':
+        this.play(this.form.idle);
+        this.actionTimer = 1.5;
+        break;
+      // ---- watermelon ----
+      case 'w_attack':
+        this.spriter.playAnim('water_attack', this.form.idle, null, true);
+        audio.play('watermelon_gunSmack', 0.35, 0.6);
+        this.actionTimer = 1.1;
+        break;
+      case 'w_jump':
+        this.spriter.playAnim('water_jump', this.form.idle, null, true);
+        audio.play('watermelon_jump', 0, 0.6);
+        this.after(0.5, () => {
+          this.xVel = 15 * dir;
+          this.yVel = -15;
+        });
+        this.actionTimer = 2.1;
+        break;
+      case 'w_shoot': {
+        this.spriter.playAnim(Math.random() < 0.5 ? 'water_shoot1' : 'water_shoot2', this.form.idle, null, true);
+        for (let i = 0; i < 5; i++) this.after(0.1 + i * 0.22, () => this.aimedShot(0, 10, player));
+        this.actionTimer = 1.8;
+        break;
+      }
+      // ---- durian ----
+      case 'dur_spin':
+        this.spriter.playAnim('dur_startspin', 'dur_spin', null, true);
+        audio.play('durian_start_spin', 0, 0.5);
+        this.after(1.2, () => {
+          this.canGoOffScreen = true;
+          this.canDamage = true;
+          this.chargeDir = this.x < 400 ? 1 : -1;
+          this.chargeStopAt = this.chargeDir > 0 ? 900 : -100;
+          this.mode = 'charge';
+        });
+        break;
+      case 'dur_slam':
+        this.spriter.playAnim('dur_spin', '', null, true);
+        this.flying = true;
+        this.canGoOffScreen = true;
+        this.x = this.x < 400 ? 0 : 800;
+        this.y = 0;
+        this.xVel = this.x < 400 ? 18 : -18;
+        this.yVel = -5;
+        this.flying = false;
+        this.canDamage = true;
+        this.mode = 'spin';
+        break;
+      // ---- eggplant ----
+      case 'egg_onetwo':
+        this.spriter.playAnim('egg_pre_onetwo', 'egg_onetwo', null, true);
+        this.canDamage = true;
+        this.after(0.4, () => (this.xVel = 4 * dir));
+        this.after(2.5, () => (this.xVel = 0));
+        this.actionTimer = 3;
+        break;
+      case 'egg_turnpunch':
+        this.spriter.playAnim('egg_pre_turnpunch', 'egg_turnpunch_idle', null, true);
+        audio.play('shoryuken', 0, 0.1);
+        this.canDamage = true;
+        this.after(0.5, () => {
+          this.canGoOffScreen = true;
+          this.chargeDir = dir;
+          this.chargeStopAt = dir > 0 ? 900 : -100;
+          this.mode = 'charge';
+        });
+        this.after(2.4, () => {
+          if (this.mode === 'charge') return;
+          this.x = player.x < 400 ? player.x + 60 : player.x - 60;
+          this.y = -20;
+        });
+        break;
+      // ---- pumpkin ----
+      case 'pk_flyslash':
+        this.spriter.playAnim('pumpkin_pre_flyingslash', 'pumpkin_flyingslash_idle', null, true);
+        this.canDamage = true;
+        this.after(0.5, () => {
+          this.canGoOffScreen = true;
+          this.chargeDir = dir;
+          this.chargeStopAt = dir > 0 ? 900 : -100;
+          this.mode = 'charge';
+        });
+        break;
+      case 'pk_slash':
+        this.spriter.playAnim('pumpkin_slash', this.form.idle, null, true);
+        audio.playRandom(['pumpkin_stab1', 'pumpkin_stab2'], 0, 0.6);
+        this.canDamage = true;
+        this.actionTimer = 2.6;
+        break;
+      // ---- sundae ----
+      case 'su_throw':
+        this.spriter.playAnim('sundae_getProjectile', '', () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('sundae_throwProjectile', this.form.idle, null, true);
+          this.after(0.43, () => this.aimedShot(4, 9, player, -100, { scale: 0.7, rotSpeed: 0.3 }));
+        }, true);
+        this.actionTimer = 2.5;
+        break;
+      case 'su_charge':
+        this.spriter.playAnim('sundae_flyingattack', 'sundae_flyingattack_idle', null, true);
+        this.canDamage = true;
+        this.after(0.4, () => {
+          this.chargeDir = this.x > 400 ? -1 : 1;
+          this.chargeStopAt = this.chargeDir > 0 ? 640 : 180;
+          this.mode = 'charge';
+        });
+        break;
+      // ---- cake ----
+      case 'ck_shoot2x2':
+      case 'ck_shoot4': {
+        this.spriter.playAnim(action === 'ck_shoot2x2' ? 'cake_shoot2x2' : 'cake_shoot4', this.form.idle, null, true);
+        const times = action === 'ck_shoot2x2' ? [0.49, 1.2] : [0.24, 0.73, 1.22, 1.7];
+        for (const time of times) {
+          this.after(time, () => {
+            if (!this.alive) return;
+            audio.playRandom(['cake_shot', 'cake_shot2', 'cake_shot3'], 0, 0.25);
+            const sx = this.x + 60 * (this.faceOverride ?? 1);
+            const sy = this.y - 90;
+            this.services?.burst(sx + 85 * (this.faceOverride ?? 1), sy, 'explosion_yellow', 7);
+            const px = player.x;
+            const py = player.y - 40;
+            const ex = sx + 170 * (this.faceOverride ?? 1);
+            if (Math.min(sx, ex) - 20 <= px && px <= Math.max(sx, ex) + 20 && Math.abs(py - sy) < 55) {
+              this.services?.hurtPlayer(20, this.faceOverride ?? 1);
+            }
+          });
+        }
+        this.actionTimer = 3;
+        break;
+      }
+      case 'ck_flyup':
+        this.spriter.playAnim('cake_flyup', '', null, true);
+        audio.play('watermelon_jump', 0.3, 0.5);
+        this.after(0.39, () => {
+          this.flying = true;
+          this.canGoOffScreen = true;
+          this.yVel = -15;
+          this.mode = 'flyup';
+        });
+        break;
+      case 'ck_sing': {
+        this.spriter.playAnim('cake_sing', 'cake_dance', null, true);
+        for (let i = 0; i < 12; i++) {
+          this.after(0.5 + i * 0.45, () => {
+            if (this.alive) this.services?.spawnChild('note', -60, 100 + Math.random() * 205, 0, 0);
+          });
+        }
+        this.actionTimer = 7;
+        break;
+      }
+      // ---- noodles ----
+      case 'nd_slash':
+        this.mode = 'approach';
+        this.approachRange = 200;
+        this.approachThen = 'nd_slash_now';
+        break;
+      case 'nd_slash_now':
+        this.spriter.playAnim('noodles_slash', this.form.idle, null, true);
+        this.canDamage = true;
+        this.after(0.29, () => (this.xVel = 55 * (this.faceOverride ?? 1)));
+        this.actionTimer = rand(1.4, 2.4);
+        break;
+      case 'nd_combo':
+        this.mode = 'approach';
+        this.approachRange = 100;
+        this.approachThen = 'nd_combo_now';
+        break;
+      case 'nd_combo_now':
+        this.spriter.playAnim('noodles_slashCombo', this.form.idle, null, true);
+        this.canDamage = true;
+        this.xVel = 2 * (this.faceOverride ?? 1);
+        this.actionTimer = rand(1.8, 2.5);
+        break;
+      case 'nd_super':
+        this.spriter.playAnim('noodles_pre_superslash', '', () => {
+          if (!this.alive) return;
+          audio.play('noodles_superslash', 0, 0.7);
+          this.spriter.playAnim('noodles_superslash', '', () => {
+            if (!this.alive) return;
+            this.spriter.playAnim('noodles_post_superslash', this.form.idle, null, true);
+          }, true);
+          this.canDamage = true;
+          this.canGoOffScreen = true;
+          this.chargeDir = this.faceOverride ?? 1;
+          this.chargeStopAt = this.chargeDir > 0 ? 880 : -80;
+          this.mode = 'charge';
+          if (Math.abs(player.y - 40 - (this.y - 30)) < 55) this.services?.hurtPlayer(20, this.chargeDir);
+        }, true);
+        break;
+      // ---- sushi ----
+      case 'sh_smash':
+        this.spriter.playAnim('sushi_doubleSmash', this.form.idle, null, true);
+        this.canDamage = true;
+        this.actionTimer = 2;
+        break;
+      case 'sh_fish':
+        this.spriter.playAnim('sushi_throwFish', 'sushi_idle_noFish', null, true);
+        this.after(0.435, () => this.aimedShot(2, 8, player, -80, { rotSpeed: 0.5 }));
+        this.after(2.2, () => {
+          if (this.alive) this.spriter.playAnim('sushi_catchFish', this.form.idle, null, true);
+        });
+        this.actionTimer = 2.6;
+        break;
+      case 'sh_fwdblast':
+        this.spriter.playAnim('sushi_pre_forward_blast', '', () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('sushi_forward_blast', this.form.idle, null, true);
+          this.after(0.18, () => {
+            const d = this.def(3);
+            if (d && this.services) {
+              audio.play('projectileShot', 0, 0.5);
+              this.services.shake(2);
+              this.services.shoot(d, this.x + 40 * (this.faceOverride ?? 1), this.y - 70, 12 * (this.faceOverride ?? 1), 0, { rotSpeed: 1 });
+            }
+          });
+        }, true);
+        this.actionTimer = 1.6;
+        break;
+      case 'sh_blast': {
+        const d = this.def(4);
+        for (let i = 0; i < 3; i++) {
+          this.after(0.2 + i * 0.45, () => {
+            if (!this.alive || !d || !this.services) return;
+            this.spriter.playAnim('sushi_blast', this.form.idle, null, true);
+            audio.play('projectileShot', 0, 0.5);
+            this.services.shoot(d, this.x, this.y - 90, [-2, 0, 2][i], -20, { scale: 0.6 });
+          });
+        }
+        for (let i = 0; i < 3; i++) {
+          this.after(1.8 + i * 0.425, () => {
+            if (this.alive && d && this.services) this.services.shoot(d, [200, 400, 600][i], -50, [-1, 0, 1][i], 10, {});
+          });
+        }
+        this.actionTimer = 3.6;
+        break;
+      }
+      // ---- hamburger ----
+      case 'hm_shoot360': {
+        this.spriter.playAnim('ham_shoot360', this.form.idle, null, true);
+        let angle = 0;
+        for (let i = 0; i < 15; i++) {
+          this.after(0.2 + i * 0.1, () => {
+            const d = this.def(1);
+            if (!this.alive || !d || !this.services) return;
+            angle += 0.42;
+            audio.play('projectileShot', 0, 0.25);
+            this.services.shoot(d, this.x, this.y - 80, 10 * Math.cos(angle), 10 * Math.sin(angle), { rotation: angle });
+          });
+        }
+        this.actionTimer = 3.2;
+        break;
+      }
+      case 'hm_shoot':
+        this.spriter.playAnim('ham_shootAtBunny', this.form.idle, null, true);
+        for (let i = 0; i < 4; i++) this.after(0.2 + i * 0.1, () => this.aimedShot(1, 10, player));
+        this.actionTimer = 2.5;
+        break;
+      // ---- combo ----
+      case 'cb_smash':
+        this.mode = 'approach';
+        this.approachRange = 150;
+        this.approachThen = 'cb_smash_now';
+        break;
+      case 'cb_smash_now':
+        this.spriter.playAnim('combo_smashArm', this.form.idle, null, true);
+        audio.play('combo_down', 0, 0.6);
+        this.after(0.7, () => (this.canDamage = true));
+        this.actionTimer = 1.5;
+        break;
+      case 'cb_kick':
+        this.mode = 'approach';
+        this.approachRange = 200;
+        this.approachThen = 'cb_kick_now';
+        break;
+      case 'cb_kick_now':
+        this.spriter.playAnim('combo_footballKick', this.form.idle, null, true);
+        audio.play('combo_up', 0, 0.6);
+        this.after(0.7, () => (this.canDamage = true));
+        this.actionTimer = 1.4;
+        break;
+      case 'cb_stomp':
+        this.spriter.playAnim('combo_stompAcrossLevel', '', null, true);
+        this.chargeDir = player.x < this.x ? -1 : 1;
+        this.mode = 'stomp';
+        audio.playRandom(['combo_stomp1', 'combo_stomp2', 'combo_stomp3'], 0, 0.3);
+        break;
+      case 'cb_nugget':
+        this.spriter.playAnim('combo_handNuggetBlast', this.form.idle, null, true);
+        this.after(0.515, () => {
+          audio.play('combo_blast', 0, 0.6);
+          this.services?.shake(2);
+          this.aimedShot(5, 10, player, -120, { scale: 0.5 });
+        });
+        this.actionTimer = 1.2;
+        break;
+    }
+  }
+
+  protected onDeath(): void {
+    super.onDeath();
+    this.clearMinions();
+    audio.play('combo_die', 0, 0.8);
+  }
+}
+
+// ---------------------------------------------------------------------------
+/**
+ * Boss_MagicMan — the true final fight (condensed solo version of the
+ * original duo). Energy shots, teleport staff smashes, eagle swoops across
+ * the arena, side-blast volleys, and a rapid-fire barrage below half HP that
+ * only stops when you land a hit.
+ */
+class MagicManBoss extends Boss {
+  private actions = ['shoot2', 'smashDown', 'eagleSwoop', 'sideBlasts', 'staffSmash', 'rapidshot'];
+  private actionIndex = 0;
+  private actionTimer = 0;
+  private glide: { x: number; y: number; time: number; total: number; sx: number; sy: number; then?: () => void } | null = null;
+  private swooping = false;
+  private swoopCount = 0;
+  private rapidFiring = false;
+
+  spawnAt(x: number, _y: number): void {
+    Enemy.prototype.spawnAt.call(this, x, 250);
+    this.flying = true;
+    this.canGoOffScreen = true;
+    this.canDamage = false;
+    this.faceOverride = -1;
+    if (this.spriter.hasAnim('spawn')) this.spriter.playAnim('spawn', 'idle', null, true);
+    this.actionTimer = 4.5;
+  }
+
+  private startGlide(x: number, y: number, seconds: number, then?: () => void): void {
+    this.xVel = 0;
+    this.yVel = 0;
+    this.glide = { x, y, time: 0, total: seconds, sx: this.x, sy: this.y, then };
+  }
+
+  private energyBall(player: PlayerView, speed = 8): void {
+    const d = this.projectileMap?.get(0);
+    if (!d || !this.services || !this.alive) return;
+    audio.play('projectileShot', 0, 0.5);
+    const sx = this.x + 30 * (this.faceOverride ?? 1);
+    const sy = this.y - 60;
+    const dx = player.x - sx;
+    const dy = player.y - 30 - sy;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    this.services.shoot(d, sx, sy, (dx / len) * speed, (dy / len) * speed, { scale: 0.8 });
+  }
+
+  protected runAI(dt: number, player: PlayerView): void {
+    this.tickDelayed(dt);
+    const t = this.type;
+
+    if (this.glide) {
+      const g = this.glide;
+      g.time += dt;
+      const u = Math.min(1, g.time / g.total);
+      const ease = 1 - (1 - u) ** 2;
+      this.x = g.sx + (g.x - g.sx) * ease;
+      this.y = g.sy + (g.y - g.sy) * ease;
+      if (u >= 1) {
+        this.glide = null;
+        g.then?.();
+      }
+      return;
+    }
+
+    if (this.swooping) {
+      const dir = this.faceOverride ?? 1;
+      this.xVel = t.maxMovementSpeed * 1.2 * dir * 1.2;
+      if ((dir > 0 && this.x > 900) || (dir < 0 && this.x < -100)) {
+        this.swoopCount++;
+        if (this.swoopCount >= 3) {
+          this.swooping = false;
+          this.canDamage = false;
+          this.xVel = 0;
+          this.actionTimer = 0.5;
+        } else {
+          // turn around for the next pass at a new height
+          this.faceOverride = dir * -1;
+          this.y = 200 + Math.random() * 150;
+          this.services?.burst(this.x, this.y, 'explosion_yellow', 6);
+        }
+      }
+      return;
+    }
+
+    if (this.rapidFiring) {
+      this.xVel = Math.sin(performance.now() / 600) * 3;
+      return; // ended by onHurt or timer
+    }
+
+    this.xVel *= 0.9;
+    this.yVel *= 0.9;
+    this.faceOverride = player.x < this.x ? -1 : 1;
+    this.actionTimer -= dt;
+    if (this.actionTimer <= 0) this.getAction(player);
+  }
+
+  private getAction(player: PlayerView): void {
+    let action = this.actions[this.actionIndex];
+    this.actionIndex = (this.actionIndex + 1) % this.actions.length;
+    // rapid-fire barrage only below half HP (original highfiveshots gate)
+    if (action === 'rapidshot' && this.hp > this.type.hp / 2) action = 'shoot2';
+    this.actionTimer = 9999;
+    this.canDamage = false;
+
+    switch (action) {
+      case 'shoot2':
+        this.startGlide(player.x < 400 ? 700 : 100, 220, 1.0, () => {
+          this.faceOverride = player.x < this.x ? -1 : 1;
+          this.spriter.playAnim('shootEnergy01', 'idle', null, true);
+          this.after(0.5, () => this.energyBall(player));
+          this.after(1.5, () => {
+            if (!this.alive) return;
+            this.spriter.playAnim('shootEnergy01', 'idle', null, true);
+            this.after(0.5, () => this.energyBall(player));
+          });
+          this.actionTimer = 3.5;
+        });
+        break;
+
+      case 'smashDown':
+        this.startGlide(player.x + (player.x < 400 ? 150 : -150), player.y - 160, 0.5, () => {
+          this.faceOverride = player.x < this.x ? -1 : 1;
+          this.spriter.playAnim('staffSmashDown', 'idle', null, true);
+          this.after(0.3, () => {
+            this.canDamage = true;
+            this.yVel = 8;
+            this.flying = false;
+          });
+          this.after(0.9, () => {
+            this.flying = true;
+            this.yVel = 0;
+            this.canDamage = false;
+            this.services?.shake(4);
+          });
+          this.actionTimer = 1.5;
+        });
+        break;
+
+      case 'eagleSwoop':
+        this.startGlide(player.x < 400 ? 900 : -100, 250, 0.6, () => {
+          this.spriter.playAnim('flySideAttack', '', null, true);
+          this.swooping = true;
+          this.swoopCount = 0;
+          this.canDamage = true;
+          this.faceOverride = this.x > 400 ? -1 : 1;
+        });
+        break;
+
+      case 'sideBlasts': {
+        const fromLeft = player.x > 400;
+        this.startGlide(fromLeft ? -80 : 880, 100 + Math.random() * 230, 0.5, () => {
+          this.faceOverride = fromLeft ? 1 : -1;
+          let round = 0;
+          const blast = () => {
+            if (!this.alive) return;
+            this.spriter.playAnim('pre_sideblast', '', () => {
+              if (!this.alive) return;
+              this.spriter.playAnim('sideblast', 'sideblast_idle', null, true);
+              this.services?.shake(3);
+              const d = this.projectileMap?.get(0);
+              if (d && this.services) {
+                for (const dy of [-20, 0, 20]) {
+                  this.services.shoot(d, this.x + 40 * (this.faceOverride ?? 1), this.y - 60 + dy, 12 * (this.faceOverride ?? 1), 0, { scale: 0.8 });
+                }
+              }
+              round++;
+              if (round < 3) {
+                this.after(0.5, () => this.startGlide(this.x, 100 + Math.random() * 230, 0.6, blast));
+              } else {
+                this.after(0.8, () => {
+                  this.startGlide(fromLeft ? 200 : 600, 250, 0.8, () => (this.actionTimer = 1));
+                });
+              }
+            }, true);
+          };
+          blast();
+        });
+        break;
+      }
+
+      case 'staffSmash':
+        // teleport beside the player and swing
+        this.spriter.playAnim('teleportOut', '', () => {
+          if (!this.alive) return;
+          this.x = player.x + (player.x < 400 ? 100 : -100);
+          this.y = player.y - 60;
+          this.faceOverride = player.x < this.x ? -1 : 1;
+          this.spriter.playAnim('staffSmashForward', 'idle', null, true);
+          this.after(0.45, () => {
+            if (Math.abs(player.x - this.x) < 130 && Math.abs(player.y - 40 - (this.y - 30)) < 80) {
+              this.services?.hurtPlayer(this.type.attackDmg, this.faceOverride ?? 1);
+              this.services?.shake(4);
+            }
+          });
+          this.actionTimer = 1.6;
+        }, true);
+        break;
+
+      default: {
+        // rapidshot: barrage until hit (or 5s)
+        this.startGlide(400, 150, 0.7, () => {
+          this.spriter.playAnim('aimDownAfterHigh', 'shootDownIdle', null, true);
+          this.rapidFiring = true;
+          let shots = 0;
+          const fire = () => {
+            if (!this.alive || !this.rapidFiring) return;
+            this.energyBall(player);
+            if (++shots < 16) this.after(0.3, fire);
+            else this.stopRapid();
+          };
+          fire();
+        });
+      }
+    }
+  }
+
+  private stopRapid(): void {
+    if (!this.rapidFiring) return;
+    this.rapidFiring = false;
+    this.spriter.playAnim('flyUpOff', 'idle', null, true);
+    this.startGlide(this.x < 400 ? 600 : 200, 250, 0.8, () => (this.actionTimer = 1));
+  }
+
+  protected onHurt(): void {
+    if (this.rapidFiring) {
+      this.stopRapid();
+      return;
+    }
+    if (this.spriter.currentAnimationName === 'idle') {
+      this.spriter.playAnim('hurt', 'idle', null, true);
+    }
   }
 }
