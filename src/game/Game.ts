@@ -16,8 +16,10 @@ import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { NinjaStars } from './NinjaStars';
 import { Pickups } from './Pickups';
 import { PlayerController } from './PlayerController';
+import { loadSave, writeSave } from './SaveData';
 import { SpellSystem } from './Spells';
 import { SwipeTrail } from './SwipeTrail';
+import { TitleScreen } from './TitleScreen';
 import { WaveManager } from './WaveManager';
 
 export const STAGE_W = 800;
@@ -125,6 +127,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
   ]);
 
   // ---- run state ----
+  const save = loadSave();
   let levelIndex = 0;
   let score = 0;
   let coins = 0;
@@ -132,6 +135,17 @@ export async function startGame(root: HTMLElement): Promise<void> {
   let wave: WaveManager | null = null;
   let levelClearTimer = 0;
   let gameComplete = false;
+  let atTitle = true;
+
+  function bankProgress(unlockNext: boolean): void {
+    if (unlockNext && levelIndex + 1 < LEVELS.length) {
+      save.furthestLevel = Math.max(save.furthestLevel, levelIndex + 1);
+    }
+    save.bestScore = Math.max(save.bestScore, score);
+    save.totalCoins += coins;
+    coins = 0;
+    writeSave(save);
+  }
 
   pickups.onCoins = (amount) => {
     coins += amount;
@@ -396,10 +410,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
         : `wave ${Math.max(0, wave.segmentIndex) + 1}  ·  kills ${wave.killsThisSegment}/${wave.currentQuota || '–'}`;
     }
     if (player.dead) {
-      centerText.text = 'YOU DIED\npress R / Start to retry';
+      centerText.text = 'YOU DIED\nR / Start: retry  ·  T: title';
       centerText.style.fill = 0xff5555;
     } else if (gameComplete) {
-      centerText.text = `GAME COMPLETE!\nscore ${score}`;
+      centerText.text = `GAME COMPLETE!\nscore ${score}  ·  T: title`;
       centerText.style.fill = 0xffe066;
     } else if (wave?.levelComplete) {
       centerText.text = 'LEVEL CLEAR!';
@@ -421,16 +435,27 @@ export async function startGame(root: HTMLElement): Promise<void> {
   }
 
   function restart(): void {
+    bankProgress(false);
     score = 0;
-    coins = 0;
     starAmmo = STARTING_STARS;
     gameComplete = false;
     player.respawn(400);
     void loadLevel(levelIndex);
   }
 
+  function gotoTitle(): void {
+    bankProgress(false);
+    score = 0;
+    gameComplete = false;
+    atTitle = true;
+    title.visible = true;
+    title.refresh(save);
+    audio.playMusic('menu_title', 1);
+  }
+
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyR' && player.dead) restart();
+    if (e.code === 'KeyR' && player.dead && !atTitle) restart();
+    if (e.code === 'KeyT' && (player.dead || gameComplete) && !atTitle) gotoTitle();
   });
 
   // dev hooks: jump to a level / boss from the console
@@ -440,6 +465,24 @@ export async function startGame(root: HTMLElement): Promise<void> {
   };
   (window as any).__bossNow = () => wave?.skipToBoss();
 
+  // ---- title screen ----
+  const title = new TitleScreen(save, LEVELS.length, effectsAtlas);
+  app.stage.addChild(title);
+  title.onStart = (lvl, loadout) => {
+    save.loadout = loadout;
+    writeSave(save);
+    spells.setLoadout(loadout);
+    levelIndex = lvl;
+    score = 0;
+    starAmmo = STARTING_STARS;
+    gameComplete = false;
+    atTitle = false;
+    title.visible = false;
+    player.respawn(400);
+    void loadLevel(levelIndex);
+  };
+  audio.playMusic('menu_title', 1.5);
+
   // ---- fixed-timestep loop ----
   let accumulator = 0;
   app.ticker.add((ticker) => {
@@ -447,6 +490,12 @@ export async function startGame(root: HTMLElement): Promise<void> {
     while (accumulator >= FIXED_DT) {
       accumulator -= FIXED_DT;
       input.update(FIXED_DT);
+
+      if (atTitle) {
+        title.pollInput(input);
+        input.postUpdate();
+        continue;
+      }
 
       if (hitstop.update(FIXED_DT)) {
         input.postUpdate();
@@ -470,6 +519,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         if (wave.levelComplete && !gameComplete) {
           levelClearTimer += FIXED_DT;
           if (levelClearTimer > 3.5) {
+            bankProgress(true);
             if (levelIndex + 1 < LEVELS.length) {
               levelIndex++;
               player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
@@ -491,6 +541,4 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
     drawHud();
   });
-
-  await loadLevel(0);
 }
