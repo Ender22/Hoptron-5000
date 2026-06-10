@@ -60,6 +60,10 @@ export class Enemy {
   protected isBoss = false;
   /** disable gravity per-instance (flying archetypes) */
   protected flying = false;
+  /** skip the arena x-clamp (boss spin attacks exit the screen) */
+  protected canGoOffScreen = false;
+  /** render scale (Pumpkin shrinks as it takes damage) */
+  protected baseScale = ENEMY_SCALE;
 
   /** per-AI scratch state */
   protected movingLeft = false;
@@ -124,8 +128,8 @@ export class Enemy {
       this.recoverTimer = 0.6;
       this.play('hurt');
       this.xVel = 4 * knockDir;
-      this.onHurt();
     }
+    this.onHurt();
     return true;
   }
 
@@ -200,9 +204,6 @@ export class Enemy {
       case 'Chaser':
         this.aiChaser(player);
         break;
-      case 'Crusher':
-        this.aiCrusher(dt, player);
-        break;
       case 'Jumper':
         this.aiJumper(dt, player);
         break;
@@ -255,46 +256,6 @@ export class Enemy {
     this.play('move');
   }
 
-  /** hover above the player then slam down (original Crusher: pineapple/drink) */
-  private aiCrusher(dt: number, player: PlayerView): void {
-    const t = this.type;
-    if (this.aiPhase === 0) {
-      // track player x at altitude
-      const dir = Math.sign(player.x - this.x);
-      this.xVel += t.acceleration * dir;
-      this.xVel = Math.max(-t.maxMovementSpeed, Math.min(t.maxMovementSpeed, this.xVel));
-      const hoverY = GROUND_Y - 220;
-      this.yVel = Math.sign(hoverY - this.y) * 1.5;
-      this.aiTimer += dt;
-      if (this.aiTimer > 1.5 && Math.abs(player.x - this.x) < 40) {
-        this.aiPhase = 1;
-        this.xVel = 0;
-        this.play('drop_ready');
-      } else {
-        this.play('move');
-      }
-    } else if (this.aiPhase === 1) {
-      // slam
-      this.play('drop');
-      this.yVel += 1.2;
-      if (this.y >= GROUND_Y) {
-        this.aiPhase = 2;
-        this.aiTimer = 0;
-        audio.play('pineapple_thud', 0, 0.7);
-        this.services?.shake(3);
-      }
-    } else {
-      // rest on ground then rise again
-      this.play('idle');
-      this.aiTimer += dt;
-      this.yVel = 0;
-      if (this.aiTimer > 1.2) {
-        this.aiPhase = 0;
-        this.aiTimer = 0;
-      }
-    }
-  }
-
   /** hop toward the player (original Jumper: springroll) */
   private aiJumper(dt: number, player: PlayerView): void {
     if (this.y >= GROUND_Y) {
@@ -324,8 +285,10 @@ export class Enemy {
       if (!this.alive || !this.canUpdate) this.xVel *= 0.85; // friction while staggered/dead
     }
 
-    if (this.x > 820) this.x = 820;
-    if (this.x < -20) this.x = -20;
+    if (!this.canGoOffScreen) {
+      if (this.x > 820) this.x = 820;
+      if (this.x < -20) this.x = -20;
+    }
   }
 
   /** bosses face the player directly instead of by velocity */
@@ -335,6 +298,6 @@ export class Enemy {
     this.spriter.position.set(this.x, this.y);
     const facing =
       this.faceOverride ?? (this.xVel < -0.1 ? -1 : this.xVel > 0.1 ? 1 : Math.sign(this.spriter.scale.x) || 1);
-    this.spriter.scale.set(ENEMY_SCALE * facing, ENEMY_SCALE);
+    this.spriter.scale.set(this.baseScale * facing, this.baseScale);
   }
 }

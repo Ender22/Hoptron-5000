@@ -6,6 +6,7 @@
  */
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
+import { PowerSwat } from './BossBehaviors';
 import type { EnemyType } from './data/levelData';
 import { Enemy, ENEMY_SCALE, type PlayerView } from './Enemy';
 import { GROUND_Y } from './PlayerController';
@@ -17,6 +18,8 @@ function rand(min: number, max: number): number {
 /** factory: aiType -> behavior subclass (others use the base class's switch) */
 export function createEnemy(type: EnemyType, spriter: SpriterPlayer): Enemy {
   switch (type.aiType) {
+    case 'Crusher':
+      return new Crusher(type, spriter);
     case 'GroundPopper':
       return new GroundPopper(type, spriter);
     case 'Shooter':
@@ -41,8 +44,132 @@ export function createEnemy(type: EnemyType, spriter: SpriterPlayer): Enemy {
       return new Spawner(type, spriter);
     case 'MiddleSlammer':
       return new MiddleSlammer(type, spriter);
+    case 'PowerSwat':
+      return new PowerSwat(type, spriter);
     default:
       return new Enemy(type, spriter);
+  }
+}
+
+// ---------------------------------------------------------------------------
+/**
+ * Crusher (pineapple, drink) — drops in from the sky onto the player once,
+ * then chases on the ground. Difficulty >4 (drink): after landing it blasts
+ * a soda jet (angled line collision + coke_blast loop) instead of biting.
+ */
+class Crusher extends Enemy {
+  private onScreen = false;
+  private crushFinished = false;
+  private shooting = false;
+  private restTimer = -1;
+  private stopLoop: (() => void) | null = null;
+  private sprayTimer = 0;
+
+  spawnAt(x: number, y: number): void {
+    super.spawnAt(x, y);
+    this.flying = true;
+    this.canDamage = false;
+    this.play('drop_ready');
+  }
+
+  protected runAI(dt: number, player: PlayerView): void {
+    const t = this.type;
+    this.faceOverride = player.x < this.x ? -1 : 1;
+
+    if (this.restTimer > 0) {
+      this.restTimer -= dt;
+      if (this.restTimer <= 0) this.startMoving();
+      return;
+    }
+
+    if (!this.onScreen) {
+      // descend to hover height y=100
+      if (this.y < 100) this.yVel += t.acceleration;
+      else {
+        this.onScreen = true;
+        this.yVel = 0;
+      }
+      return;
+    }
+
+    if (this.crushFinished) {
+      // grounded chaser (post-crush)
+      const dir = player.x < this.x ? -1 : 1;
+      this.xVel = Math.max(-t.maxMovementSpeed, Math.min(t.maxMovementSpeed, this.xVel + t.acceleration * dir));
+      if (this.spriter.currentAnimationName !== 'move') this.play('move');
+
+      if (this.shooting) {
+        // soda jet: angled line from the nozzle down-forward (original coords)
+        const f = this.faceOverride ?? 1;
+        const x1 = this.x + 30 * f;
+        const y1 = this.y - 80;
+        const x2 = this.x + 130 * f;
+        const y2 = this.y + 20;
+        this.sprayTimer -= dt;
+        if (this.sprayTimer <= 0) {
+          this.sprayTimer = 0.05;
+          const u = Math.random();
+          this.services?.burst(x1 + (x2 - x1) * u, y1 + (y2 - y1) * u, 'explosion_white', 2);
+        }
+        const px = player.x;
+        const py = player.y - 40;
+        const lenSq = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        const u2 = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / lenSq));
+        if (Math.hypot(px - (x1 + u2 * (x2 - x1)), py - (y1 + u2 * (y2 - y1))) < 32) {
+          this.services?.hurtPlayer(t.attackDmg, f);
+        }
+      }
+      return;
+    }
+
+    // hovering: track the player, then drop
+    if (player.x < this.x - 10) {
+      if (this.xVel > -t.maxMovementSpeed) this.xVel -= t.acceleration * 2;
+    } else if (player.x > this.x + 10) {
+      if (this.xVel < t.maxMovementSpeed) this.xVel += t.acceleration * 2;
+    } else {
+      if (!this.canDamage) audio.play('pineapple_start', 0, 0.5);
+      this.xVel = 0;
+      this.canDamage = true;
+      this.play('drop');
+      // fall with gravity/3 (original), locked horizontally while falling fast
+      this.yVel += t.acceleration;
+      this.flying = false;
+    }
+    if (!this.flying) {
+      this.yVel += 0.5 / 3;
+      if (this.y >= GROUND_Y) {
+        audio.play('pineapple_thud', 0, 0.8);
+        this.services?.shake(2);
+        this.y = GROUND_Y;
+        this.yVel = 0;
+        this.crushFinished = true;
+        this.canDamage = false;
+        this.play('idle');
+        this.restTimer = rand(0.8, 1.7);
+      }
+    }
+  }
+
+  private startMoving(): void {
+    if (!this.alive) return;
+    this.play('move');
+    this.canDamage = true;
+    if (this.type.difficulty > 4) {
+      // drink: soda-jet mode (body harmless, jet hurts)
+      this.canDamage = false;
+      this.shooting = true;
+      this.stopLoop = audio.playLoop('coke_blast', 0.4);
+    }
+  }
+
+  dispose(): void {
+    this.stopLoop?.();
+    this.stopLoop = null;
+  }
+
+  protected onDeath(): void {
+    this.dispose();
   }
 }
 

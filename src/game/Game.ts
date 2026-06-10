@@ -10,6 +10,7 @@ import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
 import { Boss } from './Boss';
+import { createBoss } from './BossBehaviors';
 import { DebugPanel } from './DebugPanel';
 import { Enemy, type EnemyServices } from './Enemy';
 import { EnemyProjectiles } from './EnemyProjectiles';
@@ -132,7 +133,14 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'strawberry_burstOut', 'strawberry_bite', 'pineapple_thud', 'pineapple_start',
     'spin_start', 'impact1', 'impact2', 'impact3', 'projectileShot', 'berries_explode',
     'woosh', 'spawnSomeone', 'donut_laugh', 'slam', 'fireLoop', 'explosion_01',
-    'boss_is_coming', 'boss_killed', 'explosion_boss',
+    'boss_is_coming', 'boss_killed', 'explosion_boss', 'coke_blast',
+    // boss fight sounds (first four bosses)
+    'watermelon_jump', 'watermelon_gunSmack', 'watermelon_hitGroundAfterJump', 'watermelon_die',
+    'durian_hitGround', 'durian_slam', 'durian_laugh', 'durian_start_spin',
+    'durian_powerLoss', 'durian_powerGained', 'durian_swat_destroyed', 'durian_die',
+    'shoryuken',
+    'pumpkin_hello', 'pumpkin_throwhead', 'pumpkin_shoot1', 'pumpkin_shoot2', 'pumpkin_shoot3',
+    'pumpkin_slashdown1', 'pumpkin_slashdown2', 'pumpkin_stab1', 'pumpkin_stab2', 'pumpkin_die',
   ]);
 
   // ---- run state ----
@@ -295,9 +303,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
       if (!wave || wave.needsBoss === null) return; // level changed while loading
 
       const spriter = new SpriterPlayer(`boss-${type.name}`, cached.data, cached.textures);
-      const boss = new Boss(type, spriter);
+      const boss = createBoss(type, spriter);
       // real atlas projectile (e.g. Watermelon_Seed) when the XML links one; orb fallback
-      boss.projectileDef = typesByCategory.get(def.category)?.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
+      const levelData = typesByCategory.get(def.category);
+      boss.projectileDef = levelData?.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
+      boss.projectileMap = levelData?.projectiles ?? null;
       boss.onShoot = (x, y, vx, vy) => {
         if (boss.projectileDef) enemyShots.spawn(boss.projectileDef, x, y, vx, vy);
         else bossShots.fire(x, y, vx, vy);

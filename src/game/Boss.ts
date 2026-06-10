@@ -7,7 +7,7 @@
  */
 import { Point } from 'pixi.js';
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
-import type { EnemyType } from './data/levelData';
+import type { EnemyType, ProjectileType } from './data/levelData';
 import { Enemy, type PlayerView } from './Enemy';
 import { GROUND_Y } from './PlayerController';
 
@@ -18,6 +18,42 @@ export class Boss extends Enemy {
   onShoot: ((x: number, y: number, vx: number, vy: number) => void) | null = null;
   /** fired when the boss lands a jump (for screenshake) */
   onLand: (() => void) | null = null;
+  /** the level's full projectile def table (Pumpkin uses head id 1 + blobs id 2) */
+  projectileMap: Map<number, ProjectileType> | null = null;
+
+  /** poor man's DelayedCall list (original juggler.delayCall) */
+  private delayed: { t: number; fn: () => void }[] = [];
+
+  protected after(seconds: number, fn: () => void): void {
+    this.delayed.push({ t: seconds, fn });
+  }
+
+  protected clearDelayed(): void {
+    this.delayed.length = 0;
+  }
+
+  /** tick pending delayed calls; subclasses call this first in runAI */
+  protected tickDelayed(dt: number): void {
+    for (let i = this.delayed.length - 1; i >= 0; i--) {
+      this.delayed[i].t -= dt;
+      if (this.delayed[i].t <= 0) {
+        const fn = this.delayed[i].fn;
+        this.delayed.splice(i, 1);
+        if (this.alive) fn();
+      }
+    }
+  }
+
+  /** spriter attachment point i in stage coords (original activePoints) */
+  protected pointPos(i: number): { x: number; y: number } | null {
+    const p = this.spriter.activePoints[i];
+    if (!p) return null;
+    return { x: this.x + p.x * this.spriter.scale.x, y: this.y + p.y * Math.abs(this.spriter.scale.y) };
+  }
+
+  protected onDeath(): void {
+    this.clearDelayed();
+  }
 
   private patterns: Pattern[] = [];
   private phase: 'enter' | 'idle' | Pattern = 'enter';
