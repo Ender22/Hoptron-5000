@@ -29,6 +29,10 @@ export interface EnemyServices {
   /** direct player damage that isn't body-contact (Blaster flame, Exploder blast) */
   hurtPlayer(damage: number, dir: number): void;
   burst(x: number, y: number, deathPS: string, count: number): void;
+  /** kill an enemy through the full loot/score pipeline (Hamburger heart -> boss) */
+  killEnemy(enemy: Enemy): void;
+  /** drag the player toward a point (Hamburger suck) */
+  pullPlayer(x: number, y: number, accel: number): void;
 }
 
 export class Enemy {
@@ -55,6 +59,10 @@ export class Enemy {
   deathAnim = 'die';
   /** self-removed enemies (Exploder detonation) skip loot/score */
   suicided = false;
+  /** Combo-boss KO system: at 0 HP the enemy is knocked out, not killed */
+  koMode = false;
+  /** fired when a koMode enemy gets knocked out */
+  onKO: (() => void) | null = null;
 
   /** bosses keep acting while hurt and don't get knocked back (original behavior) */
   protected isBoss = false;
@@ -110,7 +118,11 @@ export class Enemy {
   }
 
   hurt(damage: number, knockDir: number): boolean {
-    if (this.invincible || !this.alive) return false;
+    if (!this.alive) return false;
+    if (this.invincible) {
+      this.onBlockedHit();
+      return false;
+    }
     this.hp -= damage;
     this.invincible = true;
     this.contactTime = 0;
@@ -136,7 +148,21 @@ export class Enemy {
   /** subclass hook: original onHurt overrides (Bouncer stops spinning etc.) */
   protected onHurt(): void {}
 
+  /** subclass hook: hit landed while invincible (Sundae stun counter) */
+  protected onBlockedHit(): void {}
+
   protected die(): void {
+    if (this.koMode && this.spriter.hasAnim('ko')) {
+      // knocked out instead of dying (original KoEnemy flag)
+      this.hp = 1;
+      this.invincible = true;
+      this.canDamage = false;
+      this.canUpdate = false;
+      this.xVel = 0;
+      this.spriter.playAnim('ko', 'koIdle', null, true);
+      this.onKO?.();
+      return;
+    }
     this.alive = false;
     this.canDamage = false;
     this.xVel = 0;

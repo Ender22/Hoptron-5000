@@ -241,7 +241,7 @@ export class WaveManager {
     }
     // honor the XML maxNum cap (original pooled enemies per type)
     const aliveOfType = this.enemies.filter((e) => e.alive && e.type.name === name).length;
-    if (aliveOfType >= Math.min(type.maxNum, 6)) return null;
+    if (aliveOfType >= Math.min(type.maxNum, 20)) return null;
     const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
     const enemy = createEnemy(type, spriter);
     enemy.services = this.services;

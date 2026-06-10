@@ -141,6 +141,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'shoryuken',
     'pumpkin_hello', 'pumpkin_throwhead', 'pumpkin_shoot1', 'pumpkin_shoot2', 'pumpkin_shoot3',
     'pumpkin_slashdown1', 'pumpkin_slashdown2', 'pumpkin_stab1', 'pumpkin_stab2', 'pumpkin_die',
+    // bosses 5-10
+    'sundae_roar', 'durian_powerLoss', 'cake_roar', 'cake_shot', 'cake_shot2', 'cake_shot3',
+    'note1', 'note2', 'note3', 'noodles_unsheath', 'noodles_superslash',
+    'sushi_getmad', 'sushi_getmad2', 'hamburger_laugh', 'hamburger_chew', 'hamburger_spit',
+    'hamburger_suck_start', 'hamburger_suck_loop',
+    'combo_bigRoar', 'combo_roar1', 'combo_roar2', 'combo_roar3', 'combo_blast',
+    'combo_preBreak', 'combo_down', 'combo_up', 'combo_stomp1', 'combo_stomp2', 'combo_stomp3',
   ]);
 
   // ---- run state ----
@@ -257,6 +264,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
       }
     },
     burst: (x, y, deathPS, count) => bursts.burst(x, y, deathPS, count),
+    killEnemy: (enemy) => damageEnemy(enemy, 9999999, 1),
+    pullPlayer: (x, _y, accel) => {
+      if (player.dead || player.hasIFrames) return;
+      player.xVel += Math.sign(x - player.x) * accel;
+    },
   };
 
   // ---- boss spawning ----

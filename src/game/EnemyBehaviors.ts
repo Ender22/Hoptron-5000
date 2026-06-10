@@ -6,7 +6,7 @@
  */
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
-import { PowerSwat } from './BossBehaviors';
+import { AttachedMinion, NoteMinion, PowerSwat } from './BossBehaviors';
 import type { EnemyType } from './data/levelData';
 import { Enemy, ENEMY_SCALE, type PlayerView } from './Enemy';
 import { GROUND_Y } from './PlayerController';
@@ -46,6 +46,11 @@ export function createEnemy(type: EnemyType, spriter: SpriterPlayer): Enemy {
       return new MiddleSlammer(type, spriter);
     case 'PowerSwat':
       return new PowerSwat(type, spriter);
+    case 'Candle':
+    case 'HamburgerHeart':
+      return new AttachedMinion(type, spriter);
+    case 'Note':
+      return new NoteMinion(type, spriter);
     default:
       return new Enemy(type, spriter);
   }
