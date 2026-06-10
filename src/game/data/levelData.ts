@@ -10,6 +10,21 @@ export interface LootEntry {
   maxAmount: number;
 }
 
+export interface ProjectileType {
+  id: number;
+  /** texture name in the level atlas */
+  image: string;
+  damageDone: number;
+  /** seconds before the projectile despawns */
+  disappearTime: number;
+  maxMovementSpeed: number;
+  effectedByGravity: boolean;
+  /** e.g. FryMissile (homing), CandleMissile */
+  specialAIType: string;
+  /** flies out then returns (Pumpkin_Top, BigSushi_Fish) */
+  boomerang: boolean;
+}
+
 export interface EnemyType {
   id: number;
   name: string;
@@ -31,6 +46,8 @@ export interface EnemyType {
   loot: LootEntry[];
   /** boss-only: projectile texture name in the level atlas (e.g. Watermelon_Seed) */
   projectileImage: string;
+  /** ids into the level's projectile defs (original hasProjectileWithID) */
+  projectileIds: number[];
 }
 
 export interface LevelEnemies {
@@ -38,6 +55,8 @@ export interface LevelEnemies {
   types: Map<string, EnemyType>;
   /** boss entries (from <boss> elements), indexed by their XML id */
   bosses: EnemyType[];
+  /** projectile defs for this world (original <projectileType>), by id */
+  projectiles: Map<number, ProjectileType>;
 }
 
 export interface SegmentEnemy {
@@ -102,6 +121,22 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
         maxAmount: attr(l, 'maxAmount', 1),
       })),
       projectileImage: text(e, 'image'),
+      projectileIds: Array.from(e.querySelectorAll(':scope > hasProjectileWithID')).map(
+        (p) => Number(p.textContent?.trim()) || 0,
+      ),
+    };
+  }
+
+  function parseProjectile(e: Element): ProjectileType {
+    return {
+      id: num(e, 'id'),
+      image: text(e, 'image'),
+      damageDone: num(e, 'damageDone', 5),
+      disappearTime: num(e, 'disappearTime', 4),
+      maxMovementSpeed: num(e, 'maxMovementSpeed', 5),
+      effectedByGravity: num(e, 'effectedByGravity', 0) === 1,
+      specialAIType: text(e, 'specialAIType'),
+      boomerang: num(e, 'boomerang', 0) === 1,
     };
   }
 
@@ -114,7 +149,12 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
     const bosses = Array.from(levelEl.querySelectorAll(':scope > boss'))
       .map(parseType)
       .sort((a, b) => a.id - b.id);
-    levels.push({ foodCategory: levelEl.getAttribute('foodCategory') ?? '', types, bosses });
+    const projectiles = new Map<number, ProjectileType>();
+    for (const p of Array.from(levelEl.querySelectorAll(':scope > projectileType'))) {
+      const def = parseProjectile(p);
+      projectiles.set(def.id, def);
+    }
+    levels.push({ foodCategory: levelEl.getAttribute('foodCategory') ?? '', types, bosses, projectiles });
   }
   return levels;
 }

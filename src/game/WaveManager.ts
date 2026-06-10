@@ -2,15 +2,16 @@
  * WaveManager — drives a level's segment sequence from the original XML:
  * keeps the on-screen enemy count between min/max, advances on kill quota
  * (continueAfterKills) or timer (continueAfterTime), honors segment delays.
- * Boss/shopkeeper/chest segments are skipped for now (logged).
+ * Shopkeeper/chest segments are skipped for now (logged).
  */
 import { Container } from 'pixi.js';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import type { SpriterData } from '../spriter/model';
 import type { TextureMap } from '../assets/starlingAtlas';
-import { Enemy, type PlayerView } from './Enemy';
+import { Enemy, type EnemyServices, type PlayerView } from './Enemy';
+import { createEnemy, MiddleSlammer } from './EnemyBehaviors';
 import { GROUND_Y } from './PlayerController';
-import type { EnemyType, Segment } from './data/levelData';
+import type { LevelEnemies, Segment } from './data/levelData';
 
 export class WaveManager {
   enemies: Enemy[] = [];
@@ -20,22 +21,31 @@ export class WaveManager {
   levelComplete = false;
 
   private segments: Segment[];
-  private types: Map<string, EnemyType>;
+  private level: LevelEnemies;
   private sconData: SpriterData;
   private textures: TextureMap;
   private layer: Container;
+  private services: EnemyServices;
 
   private delayTimer = 0;
   private segmentTimer = 0;
   private spawnTimer = 0;
   private current: Segment | null = null;
 
-  constructor(segments: Segment[], types: Map<string, EnemyType>, sconData: SpriterData, textures: TextureMap, layer: Container) {
+  constructor(
+    segments: Segment[],
+    level: LevelEnemies,
+    sconData: SpriterData,
+    textures: TextureMap,
+    layer: Container,
+    services: EnemyServices,
+  ) {
     this.segments = segments;
-    this.types = types;
+    this.level = level;
     this.sconData = sconData;
     this.textures = textures;
     this.layer = layer;
+    this.services = services;
     this.nextSegment();
   }
 
@@ -95,6 +105,7 @@ export class WaveManager {
   bossSpawned(boss: Enemy): void {
     this.needsBoss = null;
     this.activeBoss = boss;
+    boss.services = this.services;
     this.enemies.push(boss);
   }
 
@@ -164,7 +175,10 @@ export class WaveManager {
   private clearStragglers(): void {
     // segment cleared — despawn leftovers gently (they got their kill quota)
     for (const e of this.enemies) {
-      if (e.alive) e.hurt(9999, e.x < 400 ? -1 : 1);
+      if (e.alive) {
+        e.invincible = false;
+        e.hurt(99999, e.x < 400 ? -1 : 1);
+      }
     }
   }
 
@@ -184,20 +198,61 @@ export class WaveManager {
   }
 
   /** spawn a specific enemy type by name (also used by the debug panel) */
-  spawnNamed(name: string): boolean {
-    const type = this.types.get(name);
+  spawnNamed(name: string): Enemy | null {
+    const type = this.level.types.get(name);
     if (!type) {
       console.warn(`[wave] unknown enemy type: ${name}`);
-      return false;
+      return null;
     }
 
     const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
-    const enemy = new Enemy(type, spriter);
+    const enemy = createEnemy(type, spriter);
+    enemy.services = this.services;
+    enemy.projectileDef = this.level.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
     const [x, y] = this.spawnPosition(type.spawnType);
     enemy.spawnAt(x, y);
     this.layer.addChild(spriter);
     this.enemies.push(enemy);
-    return true;
+
+    // MiddleSlammers come in linked pairs flying at each other from both walls
+    if (enemy instanceof MiddleSlammer) {
+      const partnerSpriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
+      const partner = createEnemy(type, partnerSpriter) as MiddleSlammer;
+      partner.services = this.services;
+      partner.projectileDef = enemy.projectileDef;
+      enemy.spawnAt(-30, GROUND_Y);
+      partner.spawnAt(830, GROUND_Y);
+      enemy.slammingRight = true;
+      partner.slammingRight = false;
+      enemy.partner = partner;
+      partner.partner = enemy;
+      this.layer.addChild(partnerSpriter);
+      this.enemies.push(partner);
+    }
+    return enemy;
+  }
+
+  /** spawn a child enemy with explicit position + velocity (scoops, balls, nuggets) */
+  spawnChildAt(name: string, x: number, y: number, xVel: number, yVel: number): Enemy | null {
+    const type = this.level.types.get(name);
+    if (!type) {
+      console.warn(`[wave] unknown child enemy type: ${name}`);
+      return null;
+    }
+    // honor the XML maxNum cap (original pooled enemies per type)
+    const aliveOfType = this.enemies.filter((e) => e.alive && e.type.name === name).length;
+    if (aliveOfType >= Math.min(type.maxNum, 6)) return null;
+    const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
+    const enemy = createEnemy(type, spriter);
+    enemy.services = this.services;
+    enemy.projectileDef = this.level.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
+    enemy.spawnAt(x, y);
+    enemy.y = y; // keep the launcher's altitude even for grounded types
+    enemy.xVel = xVel;
+    enemy.yVel = yVel;
+    this.layer.addChild(spriter);
+    this.enemies.push(enemy);
+    return enemy;
   }
 
   private spawnPosition(spawnType: string): [number, number] {
@@ -214,6 +269,12 @@ export class WaveManager {
         if (r < 0.5) return [side, GROUND_Y - 60 - Math.random() * 180];
         return [120 + Math.random() * 560, -60];
       }
+      case 'at_ground_pos': // appears in place on screen (corn turret)
+        return [120 + Math.random() * 560, GROUND_Y];
+      case 'offscreen_left':
+        return [-40, GROUND_Y];
+      case 'jump_from_side':
+        return [side, GROUND_Y];
       default: // from_side
         return [side, GROUND_Y];
     }
@@ -225,8 +286,9 @@ export class WaveManager {
       const e = this.enemies[i];
       if (!e.alive) {
         const anim = e.spriter.currentAnimation;
-        const doneDying = !anim || anim.name !== 'die' || e.spriter.timeMs >= anim.length;
+        const doneDying = !e.spriter.visible || !anim || anim.name !== e.deathAnim || e.spriter.timeMs >= anim.length;
         if (doneDying) {
+          e.dispose();
           e.spriter.parent?.removeChild(e.spriter);
           e.spriter.destroy();
           this.enemies.splice(i, 1);

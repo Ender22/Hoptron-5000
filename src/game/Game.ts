@@ -11,7 +11,8 @@ import { audio } from './Audio';
 import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
 import { Boss } from './Boss';
 import { DebugPanel } from './DebugPanel';
-import { Enemy } from './Enemy';
+import { Enemy, type EnemyServices } from './Enemy';
+import { EnemyProjectiles } from './EnemyProjectiles';
 import { Input } from './Input';
 import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { NinjaStars } from './NinjaStars';
@@ -115,6 +116,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
   effectsLayer.addChild(stars);
   const bossShots = new BossShots();
   effectsLayer.addChild(bossShots);
+  const enemyShots = new EnemyProjectiles();
+  effectsLayer.addChild(enemyShots);
 
   const input = new Input();
   const player = new PlayerController(bunnySpriter, input);
@@ -125,6 +128,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'bunny_drawSword', 'jumpSound', 'bunny_hurt', 'you_died', 'slide_to_stop',
     'swipe1_01', 'swipe1_02', 'swipe1_03', 'swipe2_01', 'swipe2_02', 'swipe3_01', 'swipe4_01',
     'enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03', 'pickup_coin_silver', 'pickup_coin_gold',
+    // enemy archetype sounds (original AS3 classes)
+    'strawberry_burstOut', 'strawberry_bite', 'pineapple_thud', 'pineapple_start',
+    'spin_start', 'impact1', 'impact2', 'impact3', 'projectileShot', 'berries_explode',
+    'woosh', 'spawnSomeone', 'donut_laugh', 'slam', 'fireLoop', 'explosion_01',
   ]);
 
   // ---- run state ----
@@ -220,12 +227,31 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   (window as any).__equip = (a: string, b: string) => spells.setLoadout([a, b]);
 
+  // ---- enemy services (capabilities behaviors can use) ----
+  const enemyServices: EnemyServices = {
+    shoot: (def, x, y, vx, vy, opts) => enemyShots.spawn(def, x, y, vx, vy, opts),
+    spawnChild: (name, x, y, xVel, yVel) => wave?.spawnChildAt(name, x, y, xVel, yVel) ?? null,
+    shake: (amount) => shake.add(amount),
+    hurtPlayer: (damage, dir) => {
+      if (!player.dead && player.hurt(damage, dir)) {
+        shake.add(5);
+        hitstop.freeze(0.05);
+      }
+    },
+    burst: (x, y, deathPS, count) => bursts.burst(x, y, deathPS, count),
+  };
+
   // ---- boss spawning ----
   let bossLoading = false;
 
   bossShots.onPlayerHit = () => {
     const boss = wave?.boss;
     if (player.hurt(boss ? Math.max(4, boss.type.attackDmg * 0.6) : 6, player.facing * -1)) {
+      shake.add(5);
+    }
+  };
+  enemyShots.onPlayerHit = (damage) => {
+    if (!player.dead && player.hurt(damage, player.facing * -1)) {
       shake.add(5);
     }
   };
@@ -255,7 +281,12 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
       const spriter = new SpriterPlayer(`boss-${type.name}`, cached.data, cached.textures);
       const boss = new Boss(type, spriter);
-      boss.onShoot = (x, y, vx, vy) => bossShots.fire(x, y, vx, vy);
+      // real atlas projectile (e.g. Watermelon_Seed) when the XML links one; orb fallback
+      boss.projectileDef = typesByCategory.get(def.category)?.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
+      boss.onShoot = (x, y, vx, vy) => {
+        if (boss.projectileDef) enemyShots.spawn(boss.projectileDef, x, y, vx, vy);
+        else bossShots.fire(x, y, vx, vy);
+      };
       boss.onLand = () => shake.add(8);
       boss.spawnAt(620, type.effectedByGravity ? 0 : 160); // drops in / flies in
       enemyLayer.addChild(spriter);
@@ -279,6 +310,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     wave = null;
     if (old) {
       for (const e of old.enemies) {
+        e.dispose();
         e.spriter.parent?.removeChild(e.spriter);
         e.spriter.destroy();
       }
@@ -286,6 +318,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
     pickups.clear();
     stars.clear();
+    enemyShots.clearAll();
+    bossShots.clearAll();
 
     let cached = sconCache.get(def.scon);
     if (!cached) {
@@ -298,9 +332,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
     bg.texture = await Assets.load<Texture>(`assets/textures/stages/${def.bg}.jpg`);
 
-    const types = typesByCategory.get(def.category)!.types;
     if (levelIndex !== n) return; // a newer load superseded this one
-    wave = new WaveManager(segmentLevels[n], types, cached.data, cached.textures, enemyLayer);
+    enemyShots.setTextures(cached.textures);
+    wave = new WaveManager(segmentLevels[n], typesByCategory.get(def.category)!, cached.data, cached.textures, enemyLayer, enemyServices);
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
     levelText.alpha = 1;
@@ -608,6 +642,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         wave.cleanup();
         stars.update(wave.enemies);
         bossShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
+        enemyShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
 
         // level progression
         if (wave.levelComplete && !gameComplete) {

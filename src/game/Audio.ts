@@ -42,6 +42,16 @@ class AudioManager {
     this.play(names[Math.floor(Math.random() * names.length)], delaySec, volume);
   }
 
+  /** start a looping fx (Blaster flame etc.); returns a stop function */
+  playLoop(name: string, volume = 1): () => void {
+    const howl = this.sfx.get(name);
+    if (!howl || this.muted) return () => {};
+    const id = howl.play();
+    howl.loop(true, id);
+    howl.volume(this.sfxVolume * volume, id);
+    return () => howl.stop(id);
+  }
+
   playMusic(name: string, fadeInSec = 1): void {
     if (this.musicName === name) return;
     this.stopMusic(0.5);

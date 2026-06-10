@@ -282,6 +282,14 @@ export class SpriterPlayer extends Container {
     return sprite && sprite.visible ? sprite : null;
   }
 
+  /** first visible part whose texture name matches (e.g. /gun/i for boss muzzles) */
+  findPart(re: RegExp): Sprite | null {
+    for (const [name, sprite] of this.spritesByName) {
+      if (re.test(name) && sprite.visible) return sprite;
+    }
+    return null;
+  }
+
   destroy(): void {
     this.spritesByName.clear();
     super.destroy({ children: true });

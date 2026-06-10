@@ -1,14 +1,17 @@
-﻿/**
+/**
  * Enemy - stats from the original XML, physics from MovableObject
- * (SCALE 0.55, enemy gravity 0.5), AI behaviors approximating the original
- * archetype classes (Mover, Wanderer, Chaser, GroundPopper, Crusher,
- * Exploder, ...). Anim names are uniform across enemy scons: idle/move/hurt/die.
+ * (SCALE 0.55, enemy gravity 0.5). The base class carries the simple AI
+ * archetypes (Mover, Wanderer, Chaser, Crusher, Jumper); the stateful
+ * originals (GroundPopper, Shooter, Blaster, ...) live in EnemyBehaviors.ts
+ * as subclasses created by the factory there.
  */
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
-import type { EnemyType } from './data/levelData';
+import { audio } from './Audio';
+import type { EnemyType, ProjectileType } from './data/levelData';
+import type { ProjectileOpts } from './EnemyProjectiles';
 import { GROUND_Y } from './PlayerController';
 
-const ENEMY_SCALE = 0.55;
+export const ENEMY_SCALE = 0.55;
 const ENEMY_GRAVITY = 0.5; // original LevelBase.GRAVITY (enemies), bunny uses 0.8
 
 export interface PlayerView {
@@ -17,9 +20,24 @@ export interface PlayerView {
   invincible: boolean;
 }
 
+/** level-side capabilities injected by the WaveManager */
+export interface EnemyServices {
+  shoot(def: ProjectileType, x: number, y: number, vx: number, vy: number, opts?: ProjectileOpts): void;
+  /** spawn another enemy type (Icecream scoops, Stick balls, Spawner nuggets) */
+  spawnChild(name: string, x: number, y: number, xVel: number, yVel: number): Enemy | null;
+  shake(amount: number): void;
+  /** direct player damage that isn't body-contact (Blaster flame, Exploder blast) */
+  hurtPlayer(damage: number, dir: number): void;
+  burst(x: number, y: number, deathPS: string, count: number): void;
+}
+
 export class Enemy {
   readonly type: EnemyType;
   readonly spriter: SpriterPlayer;
+
+  /** injected after construction by the WaveManager */
+  services: EnemyServices | null = null;
+  projectileDef: ProjectileType | null = null;
 
   x = 0;
   y = GROUND_Y;
@@ -33,9 +51,15 @@ export class Enemy {
   invincible = false;
   /** dwell timer for contact damage (original withinAttackDistance logic) */
   contactTime = 0;
+  /** which die-variant is playing (Stick has die/die1/die2/die_stick) */
+  deathAnim = 'die';
+  /** self-removed enemies (Exploder detonation) skip loot/score */
+  suicided = false;
 
   /** bosses keep acting while hurt and don't get knocked back (original behavior) */
   protected isBoss = false;
+  /** disable gravity per-instance (flying archetypes) */
+  protected flying = false;
 
   /** per-AI scratch state */
   protected movingLeft = false;
@@ -54,6 +78,7 @@ export class Enemy {
     this.hp = type.hp;
     spriter.setEntity(type.name);
     spriter.scale.set(ENEMY_SCALE);
+    this.flying = !type.effectedByGravity;
   }
 
   spawnAt(x: number, y: number): void {
@@ -70,6 +95,14 @@ export class Enemy {
     if (this.spriter.hasAnim(anim) && this.spriter.currentAnimationName !== anim) {
       this.spriter.playAnim(anim);
     }
+  }
+
+  /** spriter-local muzzle point (original spriter.activePoints[0]), scaled to stage units */
+  protected muzzleOffset(fallbackX = 30, fallbackY = -40): [number, number] {
+    const p = this.spriter.activePoints[0];
+    const facing = Math.sign(this.spriter.scale.x) || 1;
+    if (p) return [p.x * ENEMY_SCALE * facing, p.y * ENEMY_SCALE];
+    return [fallbackX * facing, fallbackY];
   }
 
   hurt(damage: number, knockDir: number): boolean {
@@ -91,19 +124,36 @@ export class Enemy {
       this.recoverTimer = 0.6;
       this.play('hurt');
       this.xVel = 4 * knockDir;
+      this.onHurt();
     }
     return true;
   }
+
+  /** subclass hook: original onHurt overrides (Bouncer stops spinning etc.) */
+  protected onHurt(): void {}
 
   protected die(): void {
     this.alive = false;
     this.canDamage = false;
     this.xVel = 0;
     this.yVel = 0;
-    if (this.spriter.hasAnim('die')) {
-      this.spriter.playAnim('die', '', null, true);
+    this.deathAnim = this.pickDeathAnim();
+    if (this.spriter.hasAnim(this.deathAnim)) {
+      this.spriter.playAnim(this.deathAnim, '', null, true);
     }
+    this.onDeath();
   }
+
+  /** subclass hook: which die animation variant to use */
+  protected pickDeathAnim(): string {
+    return 'die';
+  }
+
+  /** subclass hook: original onDestroyed overrides (Icecream scoop spawn etc.) */
+  protected onDeath(): void {}
+
+  /** teardown hook (stop loop sounds etc.); called before the spriter is destroyed */
+  dispose(): void {}
 
   update(dt: number, player: PlayerView): void {
     if (this.frozenTimer > 0 && this.alive) {
@@ -125,6 +175,7 @@ export class Enemy {
       if (this.recoverTimer <= 0) {
         this.canUpdate = true;
         this.canDamage = true;
+        this.onRecovered();
       }
     }
 
@@ -137,7 +188,10 @@ export class Enemy {
     this.spriter.advanceTime(dt);
   }
 
-  // ---- AI dispatch ----
+  /** subclass hook: fired when hurt-stagger recovery completes */
+  protected onRecovered(): void {}
+
+  // ---- AI dispatch (simple archetypes; complex ones are subclasses) ----
   protected runAI(dt: number, player: PlayerView): void {
     switch (this.type.aiType) {
       case 'Wanderer':
@@ -146,14 +200,8 @@ export class Enemy {
       case 'Chaser':
         this.aiChaser(player);
         break;
-      case 'GroundPopper':
-        this.aiGroundPopper(dt, player);
-        break;
       case 'Crusher':
         this.aiCrusher(dt, player);
-        break;
-      case 'Exploder':
-        this.aiChaser(player); // explosion handled by combat system on contact
         break;
       case 'Jumper':
         this.aiJumper(dt, player);
@@ -164,7 +212,7 @@ export class Enemy {
   }
 
   /** walk back and forth, turning at the arena walls (original Mover) */
-  private aiMover(): void {
+  protected aiMover(): void {
     const t = this.type;
     if (this.movingLeft) {
       if (this.xVel > -t.maxMovementSpeed) this.xVel -= t.acceleration;
@@ -199,7 +247,7 @@ export class Enemy {
   }
 
   /** run straight at the player (original Chaser) */
-  private aiChaser(player: PlayerView): void {
+  protected aiChaser(player: PlayerView): void {
     const t = this.type;
     const dir = player.x < this.x ? -1 : 1;
     this.xVel += t.acceleration * dir;
@@ -207,28 +255,7 @@ export class Enemy {
     this.play('move');
   }
 
-  /** burrow under the player, pop up, then walk (original GroundPopper) */
-  private aiGroundPopper(dt: number, player: PlayerView): void {
-    if (this.aiPhase === 0) {
-      // underground, slide toward player
-      this.spriter.visible = false;
-      this.canDamage = false;
-      this.aiTimer += dt;
-      this.x += Math.sign(player.x - this.x) * 3;
-      if (this.aiTimer > 1.2 || Math.abs(player.x - this.x) < 20) {
-        this.aiPhase = 1;
-        this.spriter.visible = true;
-        this.canDamage = true;
-        this.y = GROUND_Y + 10;
-        this.yVel = -7;
-        this.play('move');
-      }
-    } else {
-      this.aiMover();
-    }
-  }
-
-  /** hover above the player then slam down (original Crusher) */
+  /** hover above the player then slam down (original Crusher: pineapple/drink) */
   private aiCrusher(dt: number, player: PlayerView): void {
     const t = this.type;
     if (this.aiPhase === 0) {
@@ -242,17 +269,23 @@ export class Enemy {
       if (this.aiTimer > 1.5 && Math.abs(player.x - this.x) < 40) {
         this.aiPhase = 1;
         this.xVel = 0;
+        this.play('drop_ready');
+      } else {
+        this.play('move');
       }
-      this.play('move');
     } else if (this.aiPhase === 1) {
       // slam
+      this.play('drop');
       this.yVel += 1.2;
       if (this.y >= GROUND_Y) {
         this.aiPhase = 2;
         this.aiTimer = 0;
+        audio.play('pineapple_thud', 0, 0.7);
+        this.services?.shake(3);
       }
     } else {
       // rest on ground then rise again
+      this.play('idle');
       this.aiTimer += dt;
       this.yVel = 0;
       if (this.aiTimer > 1.2) {
@@ -262,7 +295,7 @@ export class Enemy {
     }
   }
 
-  /** hop toward the player (original Jumper) */
+  /** hop toward the player (original Jumper: springroll) */
   private aiJumper(dt: number, player: PlayerView): void {
     if (this.y >= GROUND_Y) {
       this.aiTimer += dt;
@@ -271,17 +304,17 @@ export class Enemy {
         this.aiTimer = 0;
         this.yVel = -9;
         this.xVel = Math.sign(player.x - this.x) * this.type.maxMovementSpeed;
-        this.play('move');
+        this.play(this.spriter.hasAnim('spring') ? 'spring' : 'move');
       }
     }
   }
 
   // ---- physics ----
-  private integrate(): void {
+  protected integrate(): void {
     this.x += this.xVel;
     this.y += this.yVel;
 
-    if (this.type.effectedByGravity) {
+    if (this.type.effectedByGravity && !this.flying) {
       if (this.y < GROUND_Y) {
         this.yVel += ENEMY_GRAVITY;
       } else {
@@ -298,7 +331,7 @@ export class Enemy {
   /** bosses face the player directly instead of by velocity */
   protected faceOverride: number | null = null;
 
-  private applyTransform(): void {
+  protected applyTransform(): void {
     this.spriter.position.set(this.x, this.y);
     const facing =
       this.faceOverride ?? (this.xVel < -0.1 ? -1 : this.xVel > 0.1 ? 1 : Math.sign(this.spriter.scale.x) || 1);

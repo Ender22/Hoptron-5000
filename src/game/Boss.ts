@@ -5,6 +5,7 @@
  * Stats come from BossModeEnemies.xml. Per-boss bespoke behaviors (original
  * Boss_*.as classes) can replace this incrementally later.
  */
+import { Point } from 'pixi.js';
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
 import type { EnemyType } from './data/levelData';
 import { Enemy, type PlayerView } from './Enemy';
@@ -72,12 +73,14 @@ export class Boss extends Enemy {
         if (this.shotsLeft > 0 && this.shotTimer <= 0) {
           this.shotTimer = 0.3;
           this.shotsLeft--;
-          const sx = this.x;
-          const sy = this.y - 55;
+          // fire from the gun/cannon part if the rig has one (e.g. WaterMelon_Gun)
+          const muzzle = this.muzzlePosition();
+          const sx = muzzle?.x ?? this.x;
+          const sy = muzzle?.y ?? this.y - 55;
           const dx = player.x - sx;
           const dy = player.y - 40 - sy;
           const dist = Math.max(1, Math.hypot(dx, dy));
-          const speed = 7;
+          const speed = this.projectileDef?.maxMovementSpeed ?? 7;
           this.onShoot?.(sx, sy, (dx / dist) * speed, (dy / dist) * speed);
         }
         if (this.phaseTimer <= 0) this.toIdle();
@@ -100,6 +103,14 @@ export class Boss extends Enemy {
         break;
       }
     }
+  }
+
+  /** gun-part position in the enemy layer's coordinates (sibling of effects) */
+  private muzzlePosition(): { x: number; y: number } | null {
+    const gun = this.spriter.findPart(/gun|cannon/i);
+    const parent = this.spriter.parent;
+    if (!gun || !parent) return null;
+    return parent.toLocal(gun.toGlobal(new Point(0, 0)));
   }
 
   private toIdle(): void {
