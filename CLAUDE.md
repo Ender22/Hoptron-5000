@@ -54,17 +54,70 @@ Title (level select + pick-2-of-8 spell loadout, localStorage saves) → 11 leve
 1. **Strawberry (GroundPopper) spawn looks wrong** — should visibly pop out of the ground. Current `aiGroundPopper` hides then unhides; check spawn y / "from_ground" position and the original GroundPopper.as (304 lines) for the burrow/emerge sequence + dirt effect.
 2. **Watermelon shots don't come from his gun tip** — currently fired from a fixed body offset. Fix: `boss.spriter.getPart('<gun part name>')` + toGlobal, like the sword trail. Check fruit atlas for the gun part texture name (grep `TA`/atlas XML for "gun"/"Watermelon"). Also use `type.projectileImage` (`Watermelon_Seed`) as the projectile sprite instead of code orbs.
 
-### Priority TODO (rough order)
+## ROADMAP — full task list to game completion
 
-1. Bug fixes above; Shooter/Blaster enemies actually shooting (currently fall back to Mover); Exploder explosion on contact.
-2. Boss fidelity passes — port patterns from `Boss_*.as` + `planning/` docs (watermelon first).
-3. Shopkeeper segments + in-run GameShop (`GameShop.xml`), chests; AP meta-shop (`ShopManager.as` spec) for sword/HP/spell upgrades.
-4. Remaining enemy AIs: Bouncer/Dropper/Spinner/Icecream/Fries/Stick/Spawner.
-5. Level 11 Magic Man fight; final-world bossWarning 2/3 mapping.
-6. Pause menu, mute toggle, fall-attack (reverse GtoA — audition in viewer first), .pex particle player, cutscenes (Scenes.xml), achievements, deploy to static host (Netlify/itch) for friends.
-7. Tuning watchpoints: 30-apple opening swarm is real data but maybe cap; spell cooldown balance; trail color (awaiting user verdict).
+Work phases in order; each phase ends with: typecheck, browser-verify, commit, update CLAUDE.md + project memory. "Done" definition for 1.0: the original game faithfully remade (minus arena mode, plus controller combat + spell loadout), deployed to a URL friends can open.
 
-### Dev hooks (console)
+### Phase A — Debug tooling (DO FIRST next session — user requested)
+
+- [ ] In-game debug panel, toggled with backquote (`) or ?debug URL param: buttons/keys for
+  skip to level N, jump to this level's boss, spawn specific enemy by name, give 500 coins,
+  give 30 stars, full heal, god mode toggle, kill all enemies, reset spell cooldowns,
+  set game speed (0.25/0.5/1/2), show hitboxes overlay (sword segment, enemy radii, player rect).
+- [ ] Keep/extend console hooks (`__gotoLevel(n)` 1-based, `__bossNow()`, `__equip(a,b)` exist).
+- [ ] Trigger shopkeeper/chest segment on demand (once Phase D lands).
+
+### Phase B — Bug fixes & enemy completeness
+
+- [ ] Strawberry GroundPopper: visible pop-out-of-ground (spec: original GroundPopper.as, 304 lines).
+- [ ] Watermelon muzzle: shots from gun part via `spriter.getPart` + toGlobal; use `type.projectileImage` (`Watermelon_Seed`) sprite from level atlas instead of code orbs. Generalize: every boss's `<image>` projectile.
+- [ ] Shooter + Blaster enemies actually fire projectiles (currently fall back to Mover). Generic enemy-projectile system w/ atlas sprites.
+- [ ] Exploder: fuse + explosion AoE on contact/death (original Exploder.as), not plain chase.
+- [ ] Remaining AIs vs originals: Bouncer, Dropper, Spinner, Icecream (spawns scoop enemies), Fries (FryMissile), Stick (club swings), Spawner (spawns on death), MiddleSlammer, Candle/Note/HamburgerHeart (boss minions — may belong to Phase C bosses).
+- [ ] Enemy facing/anim sanity pass across all 5 worlds (use __gotoLevel).
+
+### Phase C — Boss fidelity (one or two bosses per work chunk; spec = com/characterclasses/Boss_*.as + planning/*.txt)
+
+- [ ] Watermelon (366 ln), Durian (442, flying), Eggplant (383), Pumpkin (652, super-blast), Sundae (452, scoop projectiles), Cake (525, music notes), Noodles (534), Sushi (647), Hamburger (451, gravity pull), Combo (481, KO system).
+- [ ] Burrito final boss (3,122 ln: multi-phase transformations watermelon→…→combo via final_scon entities, candles, swats, hearts).
+- [ ] Magic Man fight = level 11 (1,465 ln: portals, beams, magicMan_Fight_scon + TA_Magicman-hd).
+- [ ] Resolve final-world bossWarning ids 2/3 (likely burrito then magicman — read level 10/11 segment XML + LevelBase beginMMFight).
+- [ ] Boss intro warning banner, boss death slow-mo/sequence, per-boss sounds (cake_roar, watermelon_jump etc. exist in fx/).
+
+### Phase D — Run economy & shops
+
+- [ ] Shopkeeper segments (shopkeeper_scon exists): pause wave, shop UI from `public/data/GameShop.xml` — armor tiers (absorb until break; original equipArmorTime), chi enhancers, dodge shoes (auto-dodge %), health/invince potion spawns, star packs, health carrot. Coins = currency.
+- [ ] Reward chest segments (chest open + coin shower).
+- [ ] Health/invincibility balloons + potions (original balloon mechanic).
+- [ ] Post-level score screen (kills/score/AP tally; original gotoScoreScreen) + Awesomeness Points.
+- [ ] Permanent AP meta-shop on title (ShopManager.as spec): sword dmg, max HP, slash upgrades, ninja star capacity, and SPELL UNLOCK/LEVELING (levels shorten cooldown / boost effect). Gate the 8 spells behind unlocks (currently all free) — store in SaveData.
+
+### Phase E — Game feel & polish
+
+- [ ] Fall attack (user's phase-2 feature): audition reverse `Attack_FromGtoA` in viewer; plunge = hold down + attack in air, x-damp, fast fall, AoE on land + shockwave.
+- [ ] .pex particle player (34 original defs in assets/particles: per-enemy die_*, portal, explosions) replacing/augmenting code bursts; map enemy `deathPS` names to .pex.
+- [ ] Combo meter + score multiplier (original comboBar/COMBO_FILLER), kill streak feel.
+- [ ] Pause menu (Esc/Start when alive): resume/restart/title, music+sfx mute toggles persisted to save.
+- [ ] Level title banners, 3-2-1 countdown (textures exist in assets/textures/countDown), loading tips (Loading.xml).
+- [ ] Tuning pass with user: 30-apple opening swarm cap?, spell cooldowns, trail color verdict, dash trail VFX, hit sparks on enemy contact.
+
+### Phase F — Story & meta content
+
+- [ ] SCML XML parser (dikbot_scml.scml, ending_magicman.scml are old XML format; parser mirrors parseScon — original SpriterXML.as is the spec).
+- [ ] Cutscene/dialogue system: port SceneManager.as reading assets/xml/Scenes.xml (Magic Man story beats between levels, talk icons + speech bubbles, scene mp3s in sounds/scenes/). Skippable.
+- [ ] Intro sequence (introbunny/intro_magicman scons, intro narration) — skippable; ending + credits (Credits.xml, ending music).
+- [ ] Achievements (assets/xml/Achievements.xml + toast UI; original AchievementHolder).
+- [ ] Tutorial, simplified for keyboard/controller (TutorialXML.xml as inspiration).
+- [ ] Boss Rush mode (BossModeSegments.xml + BossModeEnemies.xml + heart_scon HP display) — stretch goal.
+
+### Phase G — Ship
+
+- [ ] `vite build` production pass; asset preloading + loading screen; favicon from icons folders.
+- [ ] Deploy to static host (Netlify / itch.io / GitHub Pages) — friends play via URL. Consider trimming unused assets from dist (full assets folder is ~55MB; sounds dominate).
+- [ ] Final playtest/balance rounds with user; capture feedback in memory.
+- [ ] Stretch: touch controls for phones; gamepad rumble; Steam-style polish.
+
+### Dev hooks (console, current)
 
 `__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma.
 
