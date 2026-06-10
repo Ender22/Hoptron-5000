@@ -82,6 +82,9 @@ export class PlayerController {
   maxHp = 50;
   hp = 50;
   dead = false;
+  /** growth spell: visual scale + damage multiplier */
+  sizeScale = 1;
+  damageMultiplier = 1;
   private iframeTimer = 0;
   private hurtFlashOn = false;
 
@@ -425,6 +428,7 @@ export class PlayerController {
 
   private applyTransform(): void {
     this.spriter.position.set(this.x, this.y);
-    this.spriter.scale.set(BUNNY_SCALE * this.facing, BUNNY_SCALE);
+    const s = BUNNY_SCALE * this.sizeScale;
+    this.spriter.scale.set(s * this.facing, s);
   }
 }

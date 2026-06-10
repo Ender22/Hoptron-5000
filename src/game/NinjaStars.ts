@@ -14,6 +14,7 @@ const ROT_SPEED = 0.4;
 interface Star {
   sprite: Sprite;
   vx: number;
+  vy: number;
 }
 
 export class NinjaStars extends Container {
@@ -28,22 +29,28 @@ export class NinjaStars extends Container {
   }
 
   throw_(x: number, y: number, dir: number): void {
+    this.spawn(x + dir * 30, y - 45, STAR_SPEED * dir, 0);
+  }
+
+  /** arbitrary-velocity star (used by the Heaven's Rain spell) */
+  spawn(x: number, y: number, vx: number, vy: number): void {
     const texture = this.textures.get('NinjaStar');
     if (!texture) return;
     const sprite = new Sprite(texture);
     sprite.anchor.set(0.5);
-    sprite.position.set(x + dir * 30, y - 45);
+    sprite.position.set(x, y);
     this.addChild(sprite);
-    this.stars.push({ sprite, vx: STAR_SPEED * dir });
+    this.stars.push({ sprite, vx, vy });
   }
 
   update(enemies: Enemy[]): void {
     for (let i = this.stars.length - 1; i >= 0; i--) {
       const star = this.stars[i];
       star.sprite.x += star.vx;
+      star.sprite.y += star.vy;
       star.sprite.rotation += ROT_SPEED;
 
-      let dead = star.sprite.x < -40 || star.sprite.x > 840;
+      let dead = star.sprite.x < -40 || star.sprite.x > 840 || star.sprite.y > 400;
       if (!dead) {
         for (const enemy of enemies) {
           if (!enemy.alive || enemy.invincible) continue;

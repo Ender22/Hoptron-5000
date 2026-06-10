@@ -16,6 +16,7 @@ import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { NinjaStars } from './NinjaStars';
 import { Pickups } from './Pickups';
 import { PlayerController } from './PlayerController';
+import { SpellSystem } from './Spells';
 import { SwipeTrail } from './SwipeTrail';
 import { WaveManager } from './WaveManager';
 
@@ -161,6 +162,38 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
   }
 
+  // ---- spells ----
+  const screenFlash = new Graphics().rect(0, 0, STAGE_W, STAGE_H).fill(0xffffff);
+  screenFlash.alpha = 0;
+  app.stage.addChild(screenFlash);
+  let flashColor = 0xffffff;
+
+  const spells = new SpellSystem(
+    {
+      player,
+      enemies: () => wave?.enemies ?? [],
+      stars,
+      bursts,
+      shake,
+      damage: (enemy, amount, dir) => {
+        const wasAlive = enemy.alive;
+        enemy.frozenTimer = 0;
+        enemy.invincible = false;
+        enemy.hurt(amount, dir);
+        if (wasAlive && !enemy.alive) onEnemyKilled(enemy);
+      },
+      flash: (color, alpha) => {
+        flashColor = color;
+        screenFlash.tint = color;
+        screenFlash.alpha = alpha;
+      },
+    },
+    effectsAtlas,
+    ['freeze', 'ninjaRain'],
+  );
+
+  (window as any).__equip = (a: string, b: string) => spells.setLoadout([a, b]);
+
   // ---- boss spawning ----
   let bossLoading = false;
 
@@ -279,7 +312,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         if (distToSegment(enemy.x, enemy.y - 35, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
           hitThisSwing.add(enemy);
           const wasAlive = enemy.alive;
-          enemy.hurt(SWORD_DAMAGE, player.facing);
+          enemy.hurt(SWORD_DAMAGE * player.damageMultiplier, player.facing);
           audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
           hitstop.freeze(0.05);
           shake.add(!enemy.alive ? 5 : 2.5);
@@ -293,7 +326,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     // enemies vs player (contact damage with dwell timers, like the original)
     if (!player.dead && !player.hasIFrames) {
       for (const enemy of wave.enemies) {
-        if (!enemy.alive || !enemy.canDamage) continue;
+        if (!enemy.alive || !enemy.canDamage || enemy.frozenTimer > 0) continue;
         const overlap = Math.abs(enemy.x - player.x) < 48 && Math.abs(enemy.y - 35 - (player.y - 40)) < 60;
         if (overlap) {
           enemy.contactTime += FIXED_DT;
@@ -348,7 +381,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
   bossName.anchor.set(0.5, 1);
   bossName.position.set(STAGE_W / 2, 446);
 
-  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossBarBack, bossBar, bossName);
+  hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossBarBack, bossBar, bossName, spells);
 
   function drawHud(): void {
     const ratio = Math.max(0, player.hp / player.maxHp);
@@ -421,6 +454,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
       }
 
       if (player.dead && input.justPressed('pause')) restart();
+      if (input.justPressed('spell1')) spells.cast(0);
+      if (input.justPressed('spell2')) spells.cast(1);
 
       player.update(FIXED_DT);
       if (wave) {
@@ -450,6 +485,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
       swipeTrail.update(FIXED_DT);
       bursts.update(FIXED_DT);
       shake.update(FIXED_DT);
+      spells.update(FIXED_DT);
+      if (screenFlash.alpha > 0) screenFlash.alpha = Math.max(0, screenFlash.alpha - FIXED_DT * 1.6);
       input.postUpdate();
     }
     drawHud();

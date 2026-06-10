@@ -45,6 +45,8 @@ export class Enemy {
 
   private hurtTimer = 0;
   private recoverTimer = 0;
+  /** magic freeze (original MAGIC_FREEZECOLOR tint, AI + animation halted) */
+  frozenTimer = 0;
 
   constructor(type: EnemyType, spriter: SpriterPlayer) {
     this.type = type;
@@ -104,6 +106,13 @@ export class Enemy {
   }
 
   update(dt: number, player: PlayerView): void {
+    if (this.frozenTimer > 0 && this.alive) {
+      this.frozenTimer -= dt;
+      this.spriter.setColor(0xb4ddff);
+      if (this.frozenTimer <= 0) this.spriter.setColor(0xffffff);
+      return; // fully halted: no AI, no physics, no animation
+    }
+
     if (this.hurtTimer > 0) {
       this.hurtTimer -= dt;
       if (this.hurtTimer <= 0) {
