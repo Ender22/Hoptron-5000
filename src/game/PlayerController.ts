@@ -18,9 +18,10 @@ const FRICTION = 0.8;
 const BUNNY_SCALE = 0.375;
 
 // ---- v1 retune (original values in comments) ----
-const GRAVITY = 0.85; // 0.8
+const GRAVITY = 0.68; // 0.8 — felt too heavy in playtest
 const JUMP_VELOCITY = -12; // -11
 const DOUBLE_JUMP_VELOCITY = -10.5; // (no double jump in original)
+const JUMP_CUT_FACTOR = 0.45; // releasing jump while rising cuts velocity (variable jump height)
 const ACCELERATION = 1.3; // 0.7 — snappier starts
 const MAX_MOVE_SPEED = 10.5; // 10
 const DASH_SPEED = 19;
@@ -32,19 +33,23 @@ const ATTACK_BUFFER = 0.3; // s
 
 interface ComboStage {
   anim: string;
-  nextAnim: string;
-  /** time before the chain window check (original resetBunnyAttackTimer values) */
+  /** time before the chain window check (original resetBunnyAttackTimer values, divided by speed) */
   chainTime: number;
   impulse: number;
+  /** animation playback multiplier — attacks sped up per playtest feedback */
+  speed: number;
 }
 
-// original 4-hit chain: anims + forward impulses from onAttackTouch/attackAgainTime
+// original 4-hit chain: anims + forward impulses from onAttackTouch/attackAgainTime.
+// chainTime = original window / speed so logic stays in sync with the visuals.
 const COMBO: ComboStage[] = [
-  { anim: 'attack1', nextAnim: '', chainTime: 0.22, impulse: 8 }, // 0.25 original
-  { anim: 'attack1_to_2', nextAnim: 'attack2_to_idle', chainTime: 0.22, impulse: 7 },
-  { anim: 'attack2_to_3', nextAnim: 'attack3_to_idle', chainTime: 0.4, impulse: 4 }, // 0.45 original
-  { anim: 'attack3_to_4', nextAnim: '', chainTime: 0.5, impulse: 6 },
+  { anim: 'attack1', chainTime: 0.25 / 1.35, impulse: 8, speed: 1.35 },
+  { anim: 'attack1_to_2', chainTime: 0.25 / 1.4, impulse: 7, speed: 1.4 },
+  { anim: 'attack2_to_3', chainTime: 0.45 / 1.85, impulse: 4, speed: 1.85 }, // 600ms anim, the sluggish one
+  { anim: 'attack3_to_4', chainTime: 0.5 / 1.4, impulse: 6, speed: 1.4 },
 ];
+/** after this fraction of a stage, jump can cancel the recovery (dash cancels anytime) */
+const CANCEL_WINDOW = 0.55;
 
 type State = 'ground' | 'air' | 'dash' | 'attack';
 
@@ -156,7 +161,10 @@ export class PlayerController {
     }
   }
 
+  private jumpCutDone = false;
+
   private doJump(double: boolean): void {
+    this.jumpCutDone = false;
     if (double) {
       this.yVel = DOUBLE_JUMP_VELOCITY;
       this.jumpsUsed = 2;
@@ -206,8 +214,14 @@ export class PlayerController {
     this.comboTimer = stage.chainTime;
     this.attackQueued = false;
     this.xVel = stage.impulse * this.facing;
-    const last = this.comboStage === COMBO.length - 1;
-    this.spriter.playAnim(stage.anim, '', null, true, last);
+    this.spriter.playbackSpeed = stage.speed;
+    this.spriter.playAnim(stage.anim, '', null, true);
+  }
+
+  private exitAttack(): void {
+    this.comboStage = -1;
+    this.spriter.playbackSpeed = 1;
+    this.state = this.onGround ? 'ground' : 'air';
   }
 
   private updateAttack(dt: number): void {
@@ -217,6 +231,26 @@ export class PlayerController {
 
     if (this.input.justPressed('attack')) this.attackQueued = true;
 
+    const stage = COMBO[this.comboStage];
+    const elapsed = 1 - this.comboTimer / stage.chainTime;
+
+    // dash cancels any attack instantly — core responsiveness move
+    if (this.input.buffered('dash', 0.1) && this.dashCooldown <= 0) {
+      this.input.consumeBuffer('dash');
+      this.exitAttack();
+      this.startDash();
+      return;
+    }
+
+    // jump cancels the back half of a swing (recovery)
+    if (elapsed > CANCEL_WINDOW && this.input.buffered('jump', JUMP_BUFFER) && (this.onGround || this.jumpsUsed < 2)) {
+      this.input.consumeBuffer('jump');
+      const wasGrounded = this.onGround || this.coyoteTimer > 0;
+      this.exitAttack();
+      this.doJump(!wasGrounded);
+      return;
+    }
+
     if (this.comboTimer <= 0) {
       if (this.attackQueued && this.comboStage < COMBO.length - 1) {
         this.comboStage++;
@@ -224,8 +258,7 @@ export class PlayerController {
       } else {
         // recover to idle via the matching transition anim
         const recover = ['attack1_to_idle', 'attack2_to_idle', 'attack3_to_idle', 'attack4_to_idle'][this.comboStage];
-        this.comboStage = -1;
-        this.state = this.onGround ? 'ground' : 'air';
+        this.exitAttack();
         this.spriter.playAnim(recover, this.onGround ? 'idle' : 'idle_air');
       }
     }
@@ -235,6 +268,12 @@ export class PlayerController {
   private integrate(): void {
     this.x += this.xVel;
     this.y += this.yVel;
+
+    // variable jump height: releasing jump while rising cuts the ascent
+    if (!this.onGround && !this.jumpCutDone && this.yVel < -2 && !this.input.isDown('jump')) {
+      this.yVel *= JUMP_CUT_FACTOR;
+      this.jumpCutDone = true;
+    }
 
     if (!this.onGround && this.state !== 'dash') {
       this.yVel += GRAVITY;

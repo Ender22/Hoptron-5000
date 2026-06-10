@@ -3,12 +3,16 @@
  * Fixed 60Hz simulation (the original's per-frame constants depend on it),
  * rendering at display rate.
  */
-import { Application, Assets, Container, Sprite, Text, Texture } from 'pixi.js';
+import { Application, Assets, Container, Point, Sprite, Text, Texture } from 'pixi.js';
 import { loadStarlingAtlas } from '../assets/starlingAtlas';
 import { parseScon } from '../spriter/parseScon';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { Input } from './Input';
 import { PlayerController } from './PlayerController';
+import { SwipeTrail } from './SwipeTrail';
+
+const SWORD_PART = 'Bunny_Sword1';
+const SWORD_TIP_LOCAL_X = -153; // blade extends from the hilt pivot (0,0) to local (-153, 0)
 
 export const STAGE_W = 800;
 export const STAGE_H = 480;
@@ -52,8 +56,27 @@ export async function startGame(root: HTMLElement): Promise<void> {
   const bunnySpriter = new SpriterPlayer('bunny', parseScon(bunnyScon), bunnyAtlas);
   characterLayer.addChild(bunnySpriter);
 
+  const effectsLayer = new Container();
+  world.addChild(effectsLayer);
+
+  const swipeTrail = new SwipeTrail();
+  effectsLayer.addChild(swipeTrail);
+
   const input = new Input();
   const player = new PlayerController(bunnySpriter, input);
+
+  const hiltLocal = new Point(0, 0);
+  const tipLocal = new Point(SWORD_TIP_LOCAL_X, 0);
+  function sampleSword(): void {
+    const sword = bunnySpriter.getPart(SWORD_PART);
+    if (sword && player.state === 'attack') {
+      const hilt = effectsLayer.toLocal(sword.toGlobal(hiltLocal));
+      const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
+      swipeTrail.addSample(hilt, tip);
+    } else {
+      swipeTrail.break_();
+    }
+  }
 
   // debug HUD
   const debug = new Text({
@@ -71,6 +94,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     while (accumulator >= FIXED_DT) {
       input.update(FIXED_DT);
       player.update(FIXED_DT);
+      sampleSword();
+      swipeTrail.update(FIXED_DT);
       input.postUpdate();
       accumulator -= FIXED_DT;
     }

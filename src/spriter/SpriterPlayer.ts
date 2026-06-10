@@ -276,6 +276,12 @@ export class SpriterPlayer extends Container {
     return sprite;
   }
 
+  /** access a live part sprite (e.g. the sword) for VFX that track it */
+  getPart(name: string): Sprite | null {
+    const sprite = this.spritesByName.get(name);
+    return sprite && sprite.visible ? sprite : null;
+  }
+
   destroy(): void {
     this.spritesByName.clear();
     super.destroy({ children: true });
