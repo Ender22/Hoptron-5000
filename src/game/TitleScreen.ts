@@ -9,7 +9,7 @@ import type { Input } from './Input';
 import { SPELLS } from './Spells';
 import type { SaveData } from './SaveData';
 
-const SPELL_ORDER = ['freeze', 'ninjaRain', 'slash', 'growth'];
+const SPELL_ORDER = ['freeze', 'ninjaRain', 'slash', 'growth', 'coin', 'magnet', 'time', 'akuma'];
 
 export class TitleScreen extends Container {
   onStart: ((levelIndex: number, loadout: string[]) => void) | null = null;
@@ -36,7 +36,7 @@ export class TitleScreen extends Container {
       if (!this.visible) return;
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.changeLevel(-1);
       if (e.code === 'ArrowRight' || e.code === 'KeyD') this.changeLevel(1);
-      if (['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) {
+      if (/^Digit[1-8]$/.test(e.code)) {
         this.toggleSpell(SPELL_ORDER[Number(e.code.slice(5)) - 1]);
       }
       if (e.code === 'Enter' || e.code === 'Space') this.start();
@@ -95,7 +95,7 @@ export class TitleScreen extends Container {
     this.addChild(this.levelLabel);
 
     const spellHint = new Text({
-      text: 'spells (press 1-4 to pick two):',
+      text: 'spells (press 1-8 to pick two):',
       style: { fontFamily: 'Verdana', fontSize: 12, fill: 0xaaaaaa },
     });
     spellHint.anchor.set(0.5);

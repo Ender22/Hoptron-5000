@@ -213,6 +213,7 @@ export class PlayerController {
       if (this.onGround) {
         if (Math.abs(this.xVel) > 3 && this.spriter.currentAnimationName === 'Run') {
           this.spriter.playAnim('Slow'); // skid
+          audio.play('slide_to_stop', 0, 0.5);
         } else if (Math.abs(this.xVel) < ACCELERATION / 4) {
           this.xVel = 0;
           if (this.spriter.currentAnimationName === 'Slow' || this.spriter.currentAnimationName === 'Run') {

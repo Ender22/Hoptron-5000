@@ -91,8 +91,9 @@ export class BossShots extends Graphics {
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.age += dt;
-      s.x += s.vx;
-      s.y += s.vy;
+      // dt-scaled so the time spell slows projectiles too
+      s.x += s.vx * dt * 60;
+      s.y += s.vy * dt * 60;
       if (s.x < -40 || s.x > 840 || s.y > 500 || s.y < -60 || s.age > 6) {
         this.shots.splice(i, 1);
         continue;

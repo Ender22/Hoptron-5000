@@ -173,6 +173,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     if (enemy instanceof Boss) {
       shake.add(10);
       bossShots.clearAll();
+      audio.playMusic(LEVELS[levelIndex].music, 2);
     }
   }
 
@@ -201,10 +202,18 @@ export async function startGame(root: HTMLElement): Promise<void> {
         screenFlash.tint = color;
         screenFlash.alpha = alpha;
       },
+      spawnLoot: (x, y, item) => pickups.spawn(x, y, item),
+      vacuumLoot: () => pickups.vacuum(),
+      slowMo: (scale, seconds) => {
+        enemyTimeScale = scale;
+        slowMoTimer = seconds;
+      },
     },
     effectsAtlas,
     ['freeze', 'ninjaRain'],
   );
+  let enemyTimeScale = 1;
+  let slowMoTimer = 0;
 
   (window as any).__equip = (a: string, b: string) => spells.setLoadout([a, b]);
 
@@ -248,6 +257,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
       boss.spawnAt(620, type.effectedByGravity ? 0 : 160); // drops in / flies in
       enemyLayer.addChild(spriter);
       wave.bossSpawned(boss);
+      audio.playMusic(levelIndex % 2 === 0 ? 'bosstrack_01' : 'bosstrack_02', 1);
       console.log(`[boss] ${type.name} spawned (hp ${type.hp})`);
     } finally {
       bossLoading = false;
@@ -506,14 +516,19 @@ export async function startGame(root: HTMLElement): Promise<void> {
       if (input.justPressed('spell1')) spells.cast(0);
       if (input.justPressed('spell2')) spells.cast(1);
 
+      if (slowMoTimer > 0) {
+        slowMoTimer -= FIXED_DT;
+        if (slowMoTimer <= 0) enemyTimeScale = 1;
+      }
+
       player.update(FIXED_DT);
       if (wave) {
-        wave.update(FIXED_DT, player);
+        wave.update(FIXED_DT * enemyTimeScale, player);
         if (wave.needsBoss !== null) void spawnBoss(wave.needsBoss);
         combatTick();
         wave.cleanup();
         stars.update(wave.enemies);
-        bossShots.update(FIXED_DT, player.x, player.y, !player.dead && !player.hasIFrames);
+        bossShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
 
         // level progression
         if (wave.levelComplete && !gameComplete) {

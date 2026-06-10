@@ -114,6 +114,14 @@ export class Pickups extends Container {
     }
   }
 
+  /** magnet spell: send everything to the player now */
+  vacuum(): void {
+    for (const p of this.active) {
+      p.homing = true;
+      p.age = Math.max(p.age, 1);
+    }
+  }
+
   clear(): void {
     for (const p of this.active) p.sprite.destroy();
     this.active.length = 0;

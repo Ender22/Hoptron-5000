@@ -22,6 +22,12 @@ export interface SpellContext {
   /** big AoE damage helper (kills route through the normal kill pipeline) */
   damage: (enemy: Enemy, amount: number, dir: number) => void;
   flash: (color: number, alpha: number) => void;
+  /** spawn a loot item near a position */
+  spawnLoot: (x: number, y: number, item: string) => void;
+  /** pull all active pickups to the player immediately */
+  vacuumLoot: () => void;
+  /** slow enemy time to `scale` for `seconds` */
+  slowMo: (scale: number, seconds: number) => void;
 }
 
 interface SpellDef {
@@ -88,6 +94,57 @@ export const SPELLS: Record<string, SpellDef> = {
         p.sizeScale = 1;
         p.damageMultiplier = 1;
       }, 6000);
+    },
+  },
+  coin: {
+    id: 'coin',
+    icon: 'MagicBubble_Coin',
+    cooldown: 22,
+    cast: (ctx) => {
+      const p = ctx.player;
+      audio.play('pickup_coin_gold');
+      for (let i = 0; i < 10; i++) {
+        ctx.spawnLoot(p.x + (Math.random() - 0.5) * 120, p.y - 60, Math.random() < 0.25 ? 'loot_l' : 'loot_m');
+      }
+    },
+  },
+  magnet: {
+    id: 'magnet',
+    icon: 'MagicBubble_Magnet',
+    cooldown: 8,
+    cast: (ctx) => {
+      ctx.vacuumLoot();
+      ctx.shake.add(2);
+    },
+  },
+  time: {
+    id: 'time',
+    icon: 'MagicBubble_Time',
+    cooldown: 16,
+    cast: (ctx) => {
+      ctx.flash(0x9b6bff, 0.3);
+      ctx.slowMo(0.3, 5);
+    },
+  },
+  akuma: {
+    id: 'akuma',
+    icon: 'MagicBubble_Akuma',
+    cooldown: 26,
+    cast: (ctx) => {
+      const p = ctx.player;
+      ctx.flash(0xff3030, 0.5);
+      ctx.shake.add(12);
+      audio.play('swipe4_01');
+      // beam: full-width band at player height in the facing direction
+      for (let i = 0; i < 8; i++) {
+        ctx.bursts.burst(p.x + p.facing * (60 + i * 90), p.y - 30, 'explosion_red', 8);
+      }
+      for (const e of ctx.enemies()) {
+        if (!e.alive) continue;
+        if (Math.sign(e.x - p.x) === p.facing && Math.abs(e.y - p.y) < 160) {
+          ctx.damage(e, 100, p.facing);
+        }
+      }
     },
   },
 };
