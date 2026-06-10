@@ -76,32 +76,26 @@ In `PlayerController.ts`, originals in comments: gravity 0.68 (orig 0.8), jump �
 
 Title (level select + pick-2-of-8 spell loadout, localStorage saves) → 11 levels of XML-driven waves → bosses w/ HP bar + music → loot/stars/spells/audio → death/retry/clear/saves. All verified in browser.
 
-### Known bugs (user playtest 2026-06-10)
-
-1. **Strawberry (GroundPopper) spawn looks wrong** — should visibly pop out of the ground. Current `aiGroundPopper` hides then unhides; check spawn y / "from_ground" position and the original GroundPopper.as (304 lines) for the burrow/emerge sequence + dirt effect.
-2. **Watermelon shots don't come from his gun tip** — currently fired from a fixed body offset. Fix: `boss.spriter.getPart('<gun part name>')` + toGlobal, like the sword trail. Check fruit atlas for the gun part texture name (grep `TA`/atlas XML for "gun"/"Watermelon"). Also use `type.projectileImage` (`Watermelon_Seed`) as the projectile sprite instead of code orbs.
+### Known bugs (user playtest 2026-06-10) — both FIXED in Phase B (2026-06-10 overnight session)
 
 ## ROADMAP — full task list to game completion
 
 Work phases in order; each phase ends with: typecheck, browser-verify, commit, update CLAUDE.md + project memory, **git push** (remote: github.com/Ender22/Hoptron-5000; repo-local identity is the personal account — never change user.email here). "Done" definition for 1.0: the original game faithfully remade (minus arena mode, plus controller combat + spell loadout), deployed to a URL friends can open.
 
-### Phase A — Debug tooling (DO FIRST next session — user requested)
+### Phase A — Debug tooling — DONE (commit cde429b)
 
-- [ ] In-game debug panel, toggled with backquote (`) or ?debug URL param: buttons/keys for
-  skip to level N, jump to this level's boss, spawn specific enemy by name, give 500 coins,
-  give 30 stars, full heal, god mode toggle, kill all enemies, reset spell cooldowns,
-  set game speed (0.25/0.5/1/2), show hitboxes overlay (sword segment, enemy radii, player rect).
-- [ ] Keep/extend console hooks (`__gotoLevel(n)` 1-based, `__bossNow()`, `__equip(a,b)` exist).
+- [x] DebugPanel.ts: DOM overlay, backquote toggle, ?debug starts open. Level skip 1-11, jump to boss, spawn enemy by name (per-level dropdown, refreshed on level load), +500c/+30★/heal, god mode (PlayerController.godMode honored by hurt + hasIFrames), kill all (routes through kill pipeline → loot/score), reset spell cooldowns, game speed 0.25-2x (scales the fixed-step accumulator), hitbox overlay.
+- [x] Console hooks: `__spawn(name)`, `__god()`, `__give(c,s)`, `__speed(s)` added.
 - [ ] Trigger shopkeeper/chest segment on demand (once Phase D lands).
 
-### Phase B — Bug fixes & enemy completeness
+### Phase B — Bug fixes & enemy completeness — DONE (commit 94eacfa)
 
-- [ ] Strawberry GroundPopper: visible pop-out-of-ground (spec: original GroundPopper.as, 304 lines).
-- [ ] Watermelon muzzle: shots from gun part via `spriter.getPart` + toGlobal; use `type.projectileImage` (`Watermelon_Seed`) sprite from level atlas instead of code orbs. Generalize: every boss's `<image>` projectile.
-- [ ] Shooter + Blaster enemies actually fire projectiles (currently fall back to Mover). Generic enemy-projectile system w/ atlas sprites.
-- [ ] Exploder: fuse + explosion AoE on contact/death (original Exploder.as), not plain chase.
-- [ ] Remaining AIs vs originals: Bouncer, Dropper, Spinner, Icecream (spawns scoop enemies), Fries (FryMissile), Stick (club swings), Spawner (spawns on death), MiddleSlammer, Candle/Note/HamburgerHeart (boss minions — may belong to Phase C bosses).
-- [ ] Enemy facing/anim sanity pass across all 5 worlds (use __gotoLevel).
+- [x] GroundPopper: dirt-trickle telegraph + visible burstOut leap (yVel −10, shake, strawberry_burstOut); 3 difficulty tiers — <3 static biter (attack within 105px), 3-5 walker, ≥6 carrot sky-crusher (flyUp→lookDown→drop→thud→jumpUp loop).
+- [x] Boss projectiles: `EnemyProjectiles` (atlas sprites from per-level `<projectileType>`, parsed in levelData with `<hasProjectileWithID>` links); watermelon fires Watermelon_Seed from WaterMelon_Gun via `spriter.findPart(/gun|cannon/i)`; orb fallback for bosses without defs.
+- [x] Shooter (corn static aimed speed-8 / dumpling mobile ±5 tumbling, 0.45/2.0s vs 0.65/1.5s timings) + Blaster (pepper: wall→pre_fire→fire loop, diagonal 80,80 flame line w/ segment-vs-player check, fireLoop via audio.playLoop, sweeps wall to wall).
+- [x] Exploder (berries): float-home (y-accel /15), detonate within 50px box, damage window at +0.8s (radius ~80), fade +1.1s, suicide = no loot/score.
+- [x] Bouncer, Dropper, Spinner, Icecream (scoop1+scoop2 split on death), Fries (homing FryMissile, ease-40 turn after 0.5s), Stick (3 ball-drop anims → stab chase, per-count death anims), Spawner (nugget pump 1.35s, maxNum cap), MiddleSlammer (linked pairs spawned together; donut diff1 slam→break→laugh→walls loop, pizza diff5 fuses at 3×HP and chases). Candle/Note/HamburgerHeart deferred to Phase C (boss minions). PowerSwat (swat) = boss attachment, not in any wave segment — Phase C.
+- [x] All 5 worlds eyeballed in browser; spawn types at_ground_pos/offscreen_left/jump_from_side added (corn was spawning off-screen).
 
 ### Phase C — Boss fidelity (one or two bosses per work chunk; spec = com/characterclasses/Boss_*.as + planning/*.txt)
 
@@ -146,7 +140,7 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 
 ### Dev hooks (console, current)
 
-`__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma.
+`__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`, `__spawn('strawberry')`, `__god()`, `__give(coins, stars)`, `__speed(0.25-2)`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma. Debug panel: backquote or `?debug`.
 
 ## Working style & session tidbits
 
