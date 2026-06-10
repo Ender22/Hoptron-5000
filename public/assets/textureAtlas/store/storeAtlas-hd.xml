@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with TexturePacker http://www.codeandweb.com/texturepacker-->
+<!-- $TexturePacker:SmartUpdate:80c356d510f40d39c5ec0184c19700ae:2a0d4cd8c2cf526d03962fcbeca3d2f2:e53a37e1a64d81188e8ba26e9fd004c2$ -->
+<TextureAtlas imagePath="storeAtlas-hd.png" width="1024" height="1024">
+    <SubTexture name="token_watermelon_d" x="2" y="2" width="80" height="100"/>
+    <SubTexture name="token_watermelon" x="84" y="2" width="80" height="100"/>
+    <SubTexture name="token_unknown" x="166" y="2" width="80" height="100"/>
+    <SubTexture name="token_sushi_d" x="248" y="2" width="80" height="100"/>
+    <SubTexture name="token_sushi" x="330" y="2" width="80" height="100"/>
+    <SubTexture name="token_sundae_d" x="412" y="2" width="80" height="100"/>
+    <SubTexture name="token_sundae" x="494" y="2" width="80" height="100"/>
+    <SubTexture name="token_pumpkin_d" x="576" y="2" width="80" height="100"/>
+    <SubTexture name="token_pumpkin" x="658" y="2" width="80" height="100"/>
+    <SubTexture name="token_noodles_d" x="740" y="2" width="80" height="100"/>
+    <SubTexture name="token_noodles" x="822" y="2" width="80" height="100"/>
+    <SubTexture name="token_magicman_d" x="904" y="2" width="80" height="100"/>
+    <SubTexture name="token_magicman" x="2" y="104" width="80" height="100"/>
+    <SubTexture name="token_hamburger_d" x="84" y="104" width="80" height="100"/>
+    <SubTexture name="token_hamburger" x="166" y="104" width="80" height="100"/>
+    <SubTexture name="token_eggplant_d" x="248" y="104" width="80" height="100"/>
+    <SubTexture name="token_eggplant" x="330" y="104" width="80" height="100"/>
+    <SubTexture name="token_durian_d" x="412" y="104" width="80" height="100"/>
+    <SubTexture name="token_durian" x="494" y="104" width="80" height="100"/>
+    <SubTexture name="token_combo_d" x="576" y="104" width="80" height="100"/>
+    <SubTexture name="token_combo" x="658" y="104" width="80" height="100"/>
+    <SubTexture name="token_cake_d" x="740" y="104" width="80" height="100"/>
+    <SubTexture name="token_cake" x="822" y="104" width="80" height="100"/>
+    <SubTexture name="token_burrito_d" x="904" y="104" width="80" height="100"/>
+    <SubTexture name="token_burrito" x="2" y="206" width="80" height="100"/>
+    <SubTexture name="Shopitem_Purchase_Sword" x="84" y="206" width="181" height="107"/>
+    <SubTexture name="Shopitem_Purchase_Eye" x="267" y="206" width="117" height="133"/>
+    <SubTexture name="Shopitem_Purchase_75" x="386" y="206" width="150" height="117"/>
+    <SubTexture name="Shopitem_Purchase_10" x="538" y="206" width="145" height="117"/>
+    <SubTexture name="Shopitem_Magic_Test" x="685" y="206" width="78" height="105"/>
+    <SubTexture name="Shopitem_Magic_Slash" x="765" y="206" width="205" height="129"/>
+    <SubTexture name="Shopitem_Magic_Rain" x="2" y="341" width="123" height="129"/>
+    <SubTexture name="Shopitem_Magic_Mushroom" x="127" y="341" width="120" height="118"/>
+    <SubTexture name="Shopitem_Magic_Magnet" x="249" y="341" width="143" height="117"/>
+    <SubTexture name="Shopitem_Magic_Freeze" x="394" y="341" width="117" height="117"/>
+    <SubTexture name="Shopitem_Magic_Coins" x="513" y="341" width="144" height="136"/>
+    <SubTexture name="Shopitem_Magic_Akuma" x="659" y="341" width="117" height="117"/>
+    <SubTexture name="Shopitem_Fight_Sword" x="778" y="341" width="153" height="117"/>
+    <SubTexture name="Shopitem_Fight_Slash" x="2" y="479" width="117" height="117"/>
+    <SubTexture name="Shopitem_Fight_Health" x="121" y="479" width="117" height="117"/>
+    <SubTexture name="Shopitem_Fight_Damage" x="240" y="479" width="117" height="117"/>
+    <SubTexture name="Shopitem_Awesome_Test" x="359" y="479" width="98" height="88"/>
+    <SubTexture name="ProgressBoard" x="2" y="598" width="683" height="174"/>
+    <SubTexture name="Button_RestorePurchases_Pressed" x="687" y="598" width="109" height="42"/>
+    <SubTexture name="Button_RestorePurchases" x="798" y="598" width="109" height="42"/>
+    <SubTexture name="BunnyToken" x="909" y="598" width="102" height="102"/>
+</TextureAtlas>

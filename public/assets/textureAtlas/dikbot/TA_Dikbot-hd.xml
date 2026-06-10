@@ -1,0 +1,10 @@
+﻿<TextureAtlas imagePath="TA_Dikbot-hd.png">
+	<SubTexture name="Dikbot_Arm" x="172" y="85" width="26" height="71"/>
+	<SubTexture name="Dikbot_Banana" x="172" y="0" width="53" height="83"/>
+	<SubTexture name="Dikbot_Body" x="0" y="0" width="170" height="191"/>
+	<SubTexture name="Dikbot_ButtBack" x="0" y="193" width="53" height="22"/>
+	<SubTexture name="Dikbot_Eye" x="103" y="218" width="38" height="26"/>
+	<SubTexture name="Dikbot_EyeClosed" x="103" y="193" width="39" height="23"/>
+	<SubTexture name="Dikbot_Leg" x="55" y="193" width="46" height="60"/>
+	<SubTexture name="Dikbot_Mouth" x="0" y="217" width="45" height="20"/>
+</TextureAtlas>

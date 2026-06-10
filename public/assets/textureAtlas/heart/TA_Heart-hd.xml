@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with TexturePacker http://www.codeandweb.com/texturepacker-->
+<!-- $TexturePacker:SmartUpdate:45977d1e6144eef0b971f38cb90dc551:f1718dc115e724e06a2c06867a9115ad:acbbb85325828efc51c9656225851d53$ -->
+<TextureAtlas imagePath="TA_Heart-hd.png">
+    <SubTexture name="Heart_Full" x="2" y="2" width="97" height="86"/>
+</TextureAtlas>

@@ -1,0 +1,739 @@
+﻿<ENEMIES>	
+	<level foodCategory="fruit"> // fruit level
+		// used for building resource arrays	
+		<enemyType maxNum="30"> 
+			<id> 0 </id> <name> apple </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 15 </hp> <attackDmg> 6 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.5 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_side </spawnType> <aiType>Mover</aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 10 </pointsAward>  <time_to_damage> 0.3 </time_to_damage>
+			<lootArray>
+				<lootItem freq="70" minAmount="1" maxAmount="1"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>				
+		<enemyType maxNum="30"> 
+			<id> 1 </id> <name> banana </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 10 </hp> <attackDmg> 5 </attackDmg>			
+			<acceleration> 0.1 </acceleration> <maxMovementSpeed> 3.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> fly_from_side </spawnType> <aiType> Wanderer </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 12 </pointsAward> <time_to_damage> 0.15 </time_to_damage>
+			<lootArray>
+				<lootItem freq="60" minAmount="1" maxAmount="1"> loot_s </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="5"> 
+			<id> 2 </id> <name> strawberry </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 35 </hp> <attackDmg> 10 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_ground </spawnType> <aiType> GroundPopper </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 15 </pointsAward> <time_to_damage> 0.2 </time_to_damage>
+			<lootArray>
+				<lootItem freq="50" minAmount="1" maxAmount="1"> loot_s </lootItem>
+				<lootItem freq="8" minAmount="1" maxAmount="1"> health_xs </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="6"> 
+			<id> 3 </id> <name> pineapple </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 31 </hp> <attackDmg> 8 </attackDmg>			
+			<acceleration> 0.3 </acceleration> <maxMovementSpeed> 2 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_sky </spawnType> <aiType> Crusher </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 18 </pointsAward> <time_to_damage> 0.15 </time_to_damage>
+			<lootArray>
+				<lootItem freq="30" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="5"> 
+			<id> 4 </id> <name> berries </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 13 </hp> <attackDmg> 18 </attackDmg> 			
+			<acceleration> 1 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_purple </deathPS> <spawnType> random_offscreen </spawnType> <aiType> Exploder </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 20 </pointsAward> <time_to_damage> 0.01 </time_to_damage>
+			<lootArray>		
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>
+				<lootItem freq="8" minAmount="1" maxAmount="1"> health_s </lootItem>
+				<lootItem freq="20" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>		
+		<enemyType maxNum="2">
+			<id> 5 </id> <name> swat </name> <scon> fruit_scon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 35 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed> <size> small </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> none </spawnType> <aiType> PowerSwat </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 99 </time_to_damage>
+			<lootArray>			
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_s </lootItem>
+			</lootArray>
+		</enemyType>
+		<boss maxNum="1">
+			<id> 0 </id> <name> watermelon </name> <scon> boss_watermelon </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 1000 </hp> <attackDmg> 10 </attackDmg> <touchDmg> 2 </touchDmg>			
+			<acceleration> 1 </acceleration> <maxMovementSpeed> 5 </maxMovementSpeed> <size> large </size>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_watermelon </deathPS> <spawnType> boss_watermelon </spawnType> <aiType> Boss_Watermelon </aiType> 
+			<difficulty> 1 </difficulty> <hasProjectileWithID> 0 </hasProjectileWithID> <pointsAward> 1000 </pointsAward> <time_to_damage> 0.15 </time_to_damage>			
+		</boss>
+		<boss maxNum="1">
+			<id> 1 </id> <name> durian </name> <scon> boss_durian </scon> <atlas> fruit_enemies-hd </atlas>
+			<hp> 1500 </hp> <attackDmg> 10 </attackDmg> <touchDmg> 2 </touchDmg>			
+			<acceleration> 2 </acceleration> <maxMovementSpeed> 20 </maxMovementSpeed> <size> large </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> die_durian </deathPS> <spawnType> boss_durian </spawnType> <aiType> Boss_Durian </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 1500 </pointsAward> <time_to_damage> 0.1 </time_to_damage>			
+		</boss>
+
+		<projectileType maxNum="10">
+			<id> 0 </id> <atlas> fruit_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Watermelon_Seed </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+	</level>
+		
+//veg
+	<level foodCategory="veg">
+	
+		<enemyType maxNum="12"> 
+			<id> 0 </id> <name> broccoli </name> <scon> veg_scon </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 40 </hp> <attackDmg> 8 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_green </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 15 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="70" minAmount="1" maxAmount="1"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="2"> 
+			<id> 1 </id> <name> pepper </name> <scon> veg_scon </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 35 </hp> <attackDmg> 10 </attackDmg> 
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_sky </spawnType> <aiType> Blaster </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 17 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="60" minAmount="1" maxAmount="2"> loot_s </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="4"> 
+			<id> 2 </id> <name> onion </name> <scon> veg_scon </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 46 </hp> <attackDmg> 10 </attackDmg>			
+			<acceleration> 1 </acceleration> <maxMovementSpeed> 15 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_orange </deathPS> <spawnType> from_side </spawnType> <aiType> Spinner </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 22 </pointsAward>  <time_to_damage> 0.05 </time_to_damage> <size> medium </size>
+			<lootArray>	
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_s </lootItem>
+				<lootItem freq="35" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="10"> 
+			<id> 3 </id> <name> carrot </name> <scon> veg_scon </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 15 </hp> <attackDmg> 10 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_orange </deathPS> <spawnType> from_ground </spawnType> <aiType> GroundPopper </aiType> 
+			<difficulty> 7 </difficulty> <pointsAward> 15 </pointsAward>  <time_to_damage> 0.05 </time_to_damage> <size> small </size>
+			<lootArray>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_s </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="25" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>			
+		
+		<enemyType maxNum="8"> 
+			<id> 4 </id> <name> corn </name> <scon> veg_scon </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 51 </hp> <attackDmg> 10 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>		
+			<acceleration> 0.1 </acceleration> <maxMovementSpeed> 0.1 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> at_ground_pos </spawnType> <aiType> Shooter </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 25 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> large </size>
+			<lootArray>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> loot_l </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+				
+		<boss maxNum="1">
+			<id> 0 </id> <name> eggplant </name> <scon> boss_eggplant </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 2250 </hp> <attackDmg> 15 </attackDmg> 
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 3 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_eggplant </deathPS> <spawnType> boss_eggplant </spawnType> <aiType> Boss_Eggplant </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 2000 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>			
+		</boss>
+		
+		<boss maxNum="1">
+			<id> 1 </id> <name> pumpkin </name> <scon> boss_pumpkin </scon> <atlas> veg_enemies-hd </atlas>
+			<hp> 3000 </hp> <attackDmg> 15 </attackDmg> 
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_orange </deathPS> <spawnType> boss_pumpkin </spawnType> <aiType> Boss_Pumpkin </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 2500 </pointsAward> <time_to_damage> 0.2 </time_to_damage> <size> large </size>
+			<hasProjectileWithID> 1 </hasProjectileWithID> <hasProjectileWithID> 2 </hasProjectileWithID>			
+		</boss>
+		
+		<projectileType maxNum="10">
+			<id> 0 </id> <atlas> veg_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> OneCorn </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="1">
+			<id> 1 </id> <atlas> veg_enemies-hd </atlas>
+			<damageDone> 10 </damageDone>
+			<disappearTime> 1.5 </disappearTime> 
+			<image> Pumpkin_Top </image>	
+			<maxMovementSpeed> 8 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<boomerang> 1 </boomerang>			
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="6">
+			<id> 2 </id> <atlas> veg_enemies-hd </atlas>
+			<damageDone> 10 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> PumpkinBlob </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity>					
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+	</level>
+	
+// desserts
+
+<level foodCategory="dessert">
+	
+		<enemyType maxNum="12"> 
+			<id> 0 </id> <name> cupcake </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 65 </hp> <attackDmg> 10 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_pink </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 20 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="20" minAmount="1" maxAmount="2"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="5"> 
+			<id> 1 </id> <name> icecream </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 40 </hp> <attackDmg> 10 </attackDmg> 
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_side </spawnType> <aiType> Icecream </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 22 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="40" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="10"> 
+			<id> 2 </id> <name> scoop1 </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 20 </hp> <attackDmg> 5 </attackDmg> 
+			<acceleration> 0.1 </acceleration> <maxMovementSpeed> 2.5 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_brown </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 10 </pointsAward>  <time_to_damage> 0.3 </time_to_damage> <size> small </size>
+			<lootArray>			
+				<lootItem freq="25" minAmount="1" maxAmount="1"> loot_s </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="10"> 
+			<id> 3 </id> <name> scoop2 </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 20 </hp> <attackDmg> 5 </attackDmg> 
+			<acceleration> 0.1 </acceleration> <maxMovementSpeed> 2.5 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_pink </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 10 </pointsAward>  <time_to_damage> 0.3 </time_to_damage> <size> small </size>
+			<lootArray>						
+				<lootItem freq="25" minAmount="1" maxAmount="1"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="6"> 
+			<id> 4 </id> <name> donut </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 62 </hp> <attackDmg> 16 </attackDmg>
+			<acceleration> 0.18 </acceleration> <maxMovementSpeed> 15 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_purple </deathPS> <spawnType> from_side </spawnType> <aiType> MiddleSlammer </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 28 </pointsAward>  <time_to_damage> 0.05 </time_to_damage> <size> medium </size>
+			<lootArray>							
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_s </lootItem>
+				<lootItem freq="30" minAmount="1" maxAmount="1"> loot_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="10"> 
+			<id> 5 </id> <name> cookie </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 80 </hp> <attackDmg> 12 </attackDmg>
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_brown </deathPS> <spawnType> random_offscreen </spawnType> <aiType> Bouncer </aiType> 
+			<difficulty> 7 </difficulty> <pointsAward> 25 </pointsAward>  <time_to_damage> 0.05 </time_to_damage> <size> small </size>
+			<lootArray>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_s </lootItem>	
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_m </lootItem>
+				<lootItem freq="15" minAmount="1" maxAmount="1"> loot_l </lootItem>
+			</lootArray>
+		</enemyType>			
+		
+		<enemyType maxNum="4"> 
+			<id> 6 </id> <name> pie </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 85 </hp> <attackDmg> 18 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>		
+			<acceleration> 0.1 </acceleration> <maxMovementSpeed> 1.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_sky </spawnType> <aiType> Dropper </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 30 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> large </size>
+			<lootArray>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> loot_l </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_m </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_s </lootItem>	
+			</lootArray>			
+		</enemyType>
+		
+		<enemyType maxNum="6">
+			<id> 7 </id> <name> candle </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 61 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed> <size> small </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> none </spawnType> <aiType> Candle </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 99 </time_to_damage>
+			<lootArray>				
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_s </lootItem>
+			</lootArray>
+		</enemyType>
+		
+		<enemyType maxNum="20">
+			<id> 8 </id> <name> note </name> <scon> dessert_scon </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 40 </hp> <attackDmg> 10 </attackDmg> 		
+			<acceleration> 1 </acceleration> <maxMovementSpeed> 7 </maxMovementSpeed> <size> small </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_blue </deathPS> <spawnType> offscreen_left </spawnType> <aiType> Note </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 0.1 </time_to_damage>
+			<lootArray>				
+				<lootItem freq="50" minAmount="1" maxAmount="1"> loot_s </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+			</lootArray>
+		</enemyType>
+		
+		<boss maxNum="1">
+			<id> 0 </id> <name> sundae </name> <scon> boss_sundae </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 4000 </hp> <attackDmg> 22 </attackDmg> <touchDmg> 2 </touchDmg>			
+			<acceleration> 3 </acceleration> <maxMovementSpeed> 25 </maxMovementSpeed> <size> large </size>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_sundae </deathPS> <spawnType> boss_sundae </spawnType> <aiType> Boss_Sundae </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 3000 </pointsAward> <time_to_damage> 0.15 </time_to_damage>			
+		</boss>
+		
+		<boss maxNum="1">
+			<id> 1 </id> <name> cake </name> <scon> boss_cake </scon> <atlas> dessert_enemies-hd </atlas>
+			<hp> 5500 </hp> <attackDmg> 18 </attackDmg> <touchDmg> 2 </touchDmg> <hasProjectileWithID> 1 </hasProjectileWithID>		
+			<acceleration> 3 </acceleration> <maxMovementSpeed> 20 </maxMovementSpeed> <size> large </size>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_sundae </deathPS> <spawnType> boss_cake </spawnType> <aiType> Boss_Cake </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 3500 </pointsAward> <time_to_damage> 0.15 </time_to_damage>			
+		</boss>
+		
+		<projectileType maxNum="16">
+			<id> 0 </id> <atlas> dessert_enemies-hd </atlas>
+			<damageDone> 15 </damageDone>
+			<disappearTime> 2 </disappearTime> 
+			<image> Pie_Cherry </image>	
+			<maxMovementSpeed> 4 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="6">
+			<id> 1 </id> <atlas> dessert_enemies-hd </atlas>
+			<damageDone> 20 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Cake_MainCandle </image>	
+			<maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<specialAIType> CandleMissile </specialAIType>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+	</level>
+	
+//asian
+
+	<level foodCategory="asian">
+	
+		<enemyType maxNum="12"> 
+			<id> 0 </id> <name> sushiroll </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 75 </hp> <attackDmg> 12 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_green </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 25 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> small </size>
+			<lootArray>
+				<lootItem freq="70" minAmount="1" maxAmount="3"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="6"> 
+			<id> 1 </id> <name> springroll </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 90 </hp> <attackDmg> 16 </attackDmg>			
+			<acceleration> 2 </acceleration> <maxMovementSpeed> 15 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_orange </deathPS> <spawnType> jump_from_side </spawnType> <aiType> Jumper </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 27 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> large </size>
+			<lootArray>
+				<lootItem freq="35" minAmount="1" maxAmount="1"> loot_m </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="4"> 
+			<id> 2 </id> <name> dumpling </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 80 </hp> <attackDmg> 10 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>		
+			<acceleration> 0.3 </acceleration> <maxMovementSpeed> 1.6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_side </spawnType> <aiType> Shooter </aiType> 
+			<difficulty> 5 </difficulty> <pointsAward> 29 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> loot_l </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_m </lootItem>				
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="5"> 
+			<id> 3 </id> <name> fortunecookie </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 80 </hp> <attackDmg> 20 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 3.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> fly_from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 31 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> loot_l </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="4"> 
+			<id> 4 </id> <name> stick </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 80 </hp> <attackDmg> 14 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 3 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_sky </spawnType> <aiType> Stick </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 33 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> large </size>
+			<lootArray>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> loot_l </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_l </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="15"> 
+			<id> 5 </id> <name> ball </name> <scon> asian_scon </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 20 </hp> <attackDmg> 10 </attackDmg> 
+			<acceleration> 0.3 </acceleration> <maxMovementSpeed> 4 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 10 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> small </size>
+			<lootArray>
+				<lootItem freq="20" minAmount="1" maxAmount="1"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		<boss maxNum="1">
+			<id> 0 </id> <name> noodles </name> <scon> boss_noodles </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 6000 </hp> <attackDmg> 20 </attackDmg> 
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 8 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_durian </deathPS> <spawnType> boss_sundae </spawnType> <aiType> Boss_Noodles </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 4000 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</boss>
+		<boss maxNum="1">
+			<id> 1 </id> <name> salmon </name> <scon> boss_sushichef </scon> <atlas> asian_enemies-hd </atlas>
+			<hp> 7000 </hp> <attackDmg> 22 </attackDmg> <hasProjectileWithID> 1 </hasProjectileWithID>
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_salmon </deathPS> <spawnType> boss_salmon </spawnType> <aiType> Boss_Sushi </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 4500 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</boss>
+		
+		<projectileType maxNum="10">
+			<id> 0 </id> <atlas> asian_enemies-hd </atlas>
+			<damageDone> 4 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Dumpling_Ball </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="1">
+			<id> 1 </id> <atlas> asian_enemies-hd </atlas>
+			<damageDone> 15 </damageDone>
+			<disappearTime> 1.7 </disappearTime> 
+			<image> BigSushi_Fish </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+			<boomerang> 1 </boomerang>
+		</projectileType>
+		
+		<projectileType maxNum="2">
+			<id> 2 </id> <atlas> asian_enemies-hd </atlas>
+			<damageDone> 10 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Sushi_Soy </image>	
+			<maxMovementSpeed> 3.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="12">
+			<id> 3 </id> <atlas> asian_enemies-hd </atlas>
+			<damageDone> 10 </damageDone>
+			<disappearTime> 2 </disappearTime> 
+			<image> Sushi_Wasabi </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+	</level>
+	
+//fast food
+
+<level foodCategory="ffood">
+		
+		<enemyType maxNum="12"> 
+			<id> 0 </id> <name> hotdog </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 90 </hp> <attackDmg> 15 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_brown </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 30 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> small </size>
+			<lootArray>
+				<lootItem freq="70" minAmount="2" maxAmount="3"> loot_s </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="6"> 
+			<id> 1 </id> <name> drink </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 100 </hp> <attackDmg> 20 </attackDmg>			
+			<acceleration> 0.3 </acceleration> <maxMovementSpeed> 1.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> from_sky </spawnType> <aiType> Crusher </aiType> 
+			<difficulty> 5 </difficulty> <pointsAward> 32 </pointsAward> <time_to_damage> 0.15 </time_to_damage>
+			<lootArray>
+				<lootItem freq="30" minAmount="1" maxAmount="2"> loot_m </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_m </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="6"> 
+			<id> 2 </id> <name> pizza </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 90 </hp> <attackDmg> 18 </attackDmg>
+			<acceleration> 0.22 </acceleration> <maxMovementSpeed> 15 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_orange </deathPS> <spawnType> from_side </spawnType> <aiType> MiddleSlammer </aiType> 
+			<difficulty> 5 </difficulty> <pointsAward> 34 </pointsAward>  <time_to_damage> 0.05 </time_to_damage> <size> medium </size>
+			<lootArray>							
+				<lootItem freq="10" minAmount="1" maxAmount="1"> loot_l </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="4"> 
+			<id> 3 </id> <name> nuggetbox </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 120 </hp> <attackDmg> 0 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_side </spawnType> <aiType> Spawner </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 36 </pointsAward>  <time_to_damage> 999 </time_to_damage> <size> medium </size>
+			<lootArray>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> loot_l </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="7" minAmount="1" maxAmount="1"> health_l </lootItem>
+			</lootArray>			
+		</enemyType>
+		<enemyType maxNum="16"> 
+			<id> 4 </id> <name> nugget </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 60 </hp> <attackDmg> 14 </attackDmg>			
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 2.2 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_side </spawnType> <aiType> Mover </aiType> 
+			<difficulty> 2 </difficulty> <pointsAward> 10 </pointsAward>  <time_to_damage> 0.2 </time_to_damage> <size> small </size>			
+		</enemyType>
+		<enemyType maxNum="5">
+			<id> 5 </id> <name> fries </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 110 </hp> <attackDmg> 15 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>		
+			<acceleration> 0.2 </acceleration> <maxMovementSpeed> 4.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> from_sky </spawnType> <aiType> Fries </aiType> 
+			<difficulty> 5 </difficulty> <pointsAward> 40 </pointsAward>  <time_to_damage> 0.1 </time_to_damage> <size> large </size>
+			<lootArray>
+				<lootItem freq="3" minAmount="1" maxAmount="1"> loot_xl </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_xs </lootItem>	
+				<lootItem freq="7" minAmount="1" maxAmount="1"> health_l </lootItem>
+			</lootArray>
+		</enemyType>
+		<enemyType maxNum="1">
+			<id> 6 </id> <name> hamburger_heart </name> <scon> ffood_scon </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 9999 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> none </spawnType> <aiType> HamburgerHeart </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 0 </pointsAward> <time_to_damage> 99 </time_to_damage>			
+		</enemyType>		
+		<boss maxNum="1">
+			<id> 0 </id> <name> hamburger </name> <scon> boss_hamburger </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 600 </hp> <attackDmg> 25 </attackDmg> <hasProjectileWithID> 1 </hasProjectileWithID>
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_hamburger </deathPS> <spawnType> boss_hamburger </spawnType> <aiType> Boss_Hamburger </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 5000 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</boss>		
+		<boss maxNum="1">
+			<id> 1 </id> <name> combo </name> <scon> boss_combo </scon> <atlas> ffood_enemies-hd </atlas>
+			<hp> 8000 </hp> <attackDmg> 40 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>
+			<acceleration> 0.5 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> die_hamburger </deathPS> <spawnType> boss_combo </spawnType> <aiType> Boss_Combo </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 5500 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</boss>
+		
+		<projectileType maxNum="6">
+			<id> 0 </id> <atlas> ffood_enemies-hd </atlas>
+			<damageDone> 20 </damageDone>
+			<disappearTime> 3.3 </disappearTime> 
+			<image> Fry </image>	
+			<maxMovementSpeed> 4.5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<specialAIType> FryMissile </specialAIType>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="50">
+			<id> 1 </id> <atlas> ffood_enemies-hd </atlas>
+			<damageDone> 15 </damageDone>
+			<disappearTime> 3.5 </disappearTime> 
+			<image> Hamburger_Seed </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+		<projectileType maxNum="2">
+			<id> 2 </id> <atlas> ffood_enemies-hd </atlas>
+			<damageDone> 15 </damageDone>
+			<disappearTime> 3 </disappearTime> 
+			<image> Nugget_Body </image>	
+			<maxMovementSpeed> 12 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		
+	</level>
+
+//final
+	<level foodCategory="final">
+	
+		<enemyType maxNum="1"> 
+			<id> 0 </id> <name> burrito </name> <scon> final_scon </scon> <atlas> final_enemies-hd </atlas>
+			<hp> 18000 </hp> <attackDmg> 25 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>
+			<acceleration> 2 </acceleration> <maxMovementSpeed> 6 </maxMovementSpeed>
+			<effectedByGravity> 1 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> boss_mm_burrito </spawnType> <aiType> Boss_Burrito </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 6000 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</enemyType>		
+		<enemyType maxNum="1">
+			<id> 1 </id> <name> hamburger_heart </name> <scon> final_scon </scon> <atlas> final_enemies-hd </atlas>
+			<hp> 9999 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> none </spawnType> <aiType> HamburgerHeart </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 99 </time_to_damage>			
+		</enemyType>
+		<enemyType maxNum="2">
+			<id> 2 </id> <name> swat </name> <scon> final_scon </scon> <atlas> final_enemies-hd </atlas>
+			<hp> 18 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> none </spawnType> <aiType> PowerSwat </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 99 </time_to_damage>
+			<lootArray>				
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_m </lootItem>
+				<lootItem freq="10" minAmount="1" maxAmount="1"> health_s </lootItem>	
+			</lootArray>
+		</enemyType>
+		<enemyType maxNum="6">
+			<id> 3 </id> <name> candle </name> <scon> final_scon </scon> <atlas> final_enemies-hd </atlas>
+			<hp> 1 </hp> <attackDmg> 0 </attackDmg> <touchDmg> 0 </touchDmg>			
+			<acceleration> 0 </acceleration> <maxMovementSpeed> 0 </maxMovementSpeed> <size> small </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_red </deathPS> <spawnType> none </spawnType> <aiType> Burrito_Candle </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 99 </time_to_damage>
+			<lootArray>				
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_m </lootItem>
+				<lootItem freq="5" minAmount="1" maxAmount="1"> health_s </lootItem>	
+			</lootArray>
+		</enemyType>
+		<enemyType maxNum="25">
+			<id> 4 </id> <name> note </name> <scon> final_scon </scon> <atlas> final_enemies-hd </atlas>
+			<hp> 40 </hp> <attackDmg> 10 </attackDmg> 		
+			<acceleration> 1 </acceleration> <maxMovementSpeed> 7 </maxMovementSpeed> <size> small </size>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_blue </deathPS> <spawnType> offscreen_left </spawnType> <aiType> Note </aiType> 
+			<difficulty> 0 </difficulty> <pointsAward> 5 </pointsAward> <time_to_damage> 0.1 </time_to_damage>
+			<lootArray>								
+			</lootArray>
+		</enemyType>
+		
+		<projectileType maxNum="10">
+			<id> 0 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Watermelon_Seed </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		<projectileType maxNum="50">
+			<id> 1 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 3.5 </disappearTime> 
+			<image> Hamburger_Seed </image>	
+			<maxMovementSpeed> 10 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		<projectileType maxNum="1">
+			<id> 2 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 1.7 </disappearTime> 
+			<image> BigSushi_Fish </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+			<boomerang> 1 </boomerang>
+		</projectileType>
+		<projectileType maxNum="6">
+			<id> 3 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Burrito_Projectile1 </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		<projectileType maxNum="6">
+			<id> 4 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 4 </disappearTime> 
+			<image> Burrito_Projectile2 </image>	
+			<maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+		<projectileType maxNum="2">
+			<id> 5 </id> <atlas> final_enemies-hd </atlas>
+			<damageDone> 5 </damageDone>
+			<disappearTime> 3 </disappearTime> 
+			<image> Burrito_Hand </image>	
+			<maxMovementSpeed> 12 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>
+	</level>
+	
+	<level foodCategory="mm">
+	
+		<enemyType maxNum="2"> 
+			<id> 0 </id> <name> magicman </name> <scon> magicMan_Fight_scon </scon> <atlas> TA_Magicman-hd </atlas>
+			<hp> 10000 </hp> <attackDmg> 35 </attackDmg> <hasProjectileWithID> 0 </hasProjectileWithID>
+			<acceleration> 2 </acceleration> <maxMovementSpeed> 5 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity> <deathPS> explosion_yellow </deathPS> <spawnType> boss_magicman </spawnType> <aiType> Boss_MagicMan </aiType> 
+			<difficulty> 1 </difficulty> <pointsAward> 5000 </pointsAward> <time_to_damage> 0.1 </time_to_damage> <size> large </size>					
+		</enemyType>
+	
+		<projectileType maxNum="20">
+			<id> 0 </id> <atlas> TA_Magicman-hd </atlas>
+			<damageDone> 20 </damageDone>
+			<disappearTime> 3 </disappearTime> 
+			<image> MM_EnergyBall </image>	
+			<maxMovementSpeed> 12 </maxMovementSpeed>
+			<effectedByGravity> 0 </effectedByGravity>
+			<hitEffect> </hitEffect>
+		</projectileType>		
+		
+	</level>	
+</ENEMIES>

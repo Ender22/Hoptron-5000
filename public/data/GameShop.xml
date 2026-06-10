@@ -1,0 +1,152 @@
+﻿<STORE>		
+	<item>		
+		<id> 2000 </id>				
+		<name> Ninja Star Pack </name>
+		<description> A pack of 30 ninja stars. </description>
+		<price> 40 </price>
+		<asset> GameShopItem_NinjaStars </asset>
+	</item>
+	<item>
+		<level>
+			<id> 2010 </id>
+			<name> Thin Armor </name>
+			<description> Thin body armor that will protect you from damage until it breaks. </description>
+			<price> 150 </price>
+			<asset> GameShopItem_BodyArmor </asset>
+		</level>		
+		<level>
+			<id> 2011 </id>
+			<name> Strong Armor </name>
+			<description> Durable body armor that will protect you from damage until it breaks. </description>
+			<price> 250 </price>
+			<asset> GameShopItem_BodyArmor </asset>
+		</level>		
+		<level>
+			<id> 2012 </id>
+			<name> Diamond Armor </name>
+			<description> Incredible Tough body armor that will protect you from damage until it breaks. </description>
+			<price> 350 </price>
+			<asset> GameShopItem_BodyArmor </asset>
+		</level>
+		<level>
+			<id> 2013 </id>
+			<name> Swift Dragon Armor </name>
+			<description> The Toughest body armor that will protect you from damage until it breaks AND make you faster. </description>
+			<price> 450 </price>
+			<asset> GameShopItem_BodyArmor </asset>
+		</level>
+	</item>		
+	<item>
+		<level>
+			<id> 2020 </id>
+			<name> Chi Enhancer </name>
+			<description> Take less damage from enemy attacks </description>
+			<price> 100 </price>
+			<asset> GameShopItem_DamageDown </asset>
+		</level>
+		<level>
+			<id> 2021 </id>
+			<name> Chi Enhancer 2 </name>
+			<description> Take even less damage from enemy attacks </description>
+			<price> 300 </price>
+			<asset> GameShopItem_DamageDown </asset>
+		</level>
+		<level>
+			<id> 2022 </id>
+			<name> Chi Enhancer 3 </name>
+			<description> Take even less damage from enemy attacks </description>
+			<price> 500 </price>
+			<asset> GameShopItem_DamageDown </asset>
+		</level>
+		<level>
+			<id> 2023 </id>
+			<name> Chi Enhancer 4 </name>
+			<description> Take even less damage from enemy attacks </description>
+			<price> 700 </price>
+			<asset> GameShopItem_DamageDown </asset>
+		</level>
+		<level>
+			<id> 2024 </id>
+			<name> Chi Enhancer 5 </name>
+			<description> Take even less damage from enemy attacks </description>
+			<price> 1000 </price>
+			<asset> GameShopItem_DamageDown </asset>
+		</level>
+	</item>	
+	
+	<item>
+		<level>
+			<id> 2030 </id>
+			<name> Health Potion </name>
+			<description> Occasionally spawns a health potion which restores 50% health. </description>
+			<price> 200 </price>
+			<asset> GameShopItem_LifeBubble </asset>
+		</level>		
+		<level>
+			<id> 2031 </id>
+			<name> Mega Health Potion </name>
+			<description> Occasionally spawns a large health potion which restores 75% health. </description>
+			<price> 600 </price>
+			<asset> GameShopItem_LifeBubble </asset>
+		</level>		
+	</item>	
+	
+	<item>	
+		<level>
+			<id> 2040 </id>
+			<name> Invincibility Potion </name>
+			<description> Occasionally spawns a potion that makes you invincible for a short time. </description>
+			<price> 400 </price>
+			<asset> GameShopItem_InvinceBubble </asset>
+		</level>
+		<level>
+			<id> 2041 </id>
+			<name> Mega Invincibility Potion </name>
+			<description> Occasionally spawns a large potion that makes you invincible for a while. </description>
+			<price> 800 </price>
+			<asset> GameShopItem_InvinceBubble </asset>
+		</level>
+	</item>
+	
+	<item>
+		<level>
+			<id> 2050 </id>
+			<name> Lucky Robo Arm </name>
+			<description> Increase your luck so enemies drop more coins. </description>
+			<price> 200 </price>
+			<asset> GameShopItem_LuckAmulet </asset>
+		</level>		
+		<level>
+			<id> 2051 </id>
+			<name> Golden Lucky Robo Arm </name>
+			<description> Increase your luck further so enemies drop even more coins.  </description>
+			<price> 500 </price>
+			<asset> GameShopItem_LuckAmulet </asset>
+		</level>		
+	</item>	
+	
+	<item>
+		<level>
+			<id> 2060 </id>
+			<name> Dodge Shoes </name>
+			<description> Sweet kicks that help you auto dodge some attacks. </description>
+			<price> 225 </price>
+			<asset> GameShopItem_DodgeShoes </asset>
+		</level>
+		<level>
+			<id> 2061 </id>
+			<name> Super Dodge Shoes </name>
+			<description> Sweet kicks that help you auto dodge even more attacks. </description>
+			<price> 850 </price>
+			<asset> GameShopItem_DodgeShoes </asset>
+		</level>
+	</item>
+
+	<item>		
+		<id> 2070 </id>
+		<name> Health Carrot </name>
+		<description> Restore some health </description>
+		<price> 5 </price>
+		<asset> GameShopItem_HealthCarrot </asset>			
+	</item>	
+</STORE>

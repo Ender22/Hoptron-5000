@@ -1,0 +1,33 @@
+﻿<TextureAtlas imagePath="titleOnly-hd.png">
+	<SubTexture name="Button_Logout" x="297" y="885" width="62" height="62"/>
+	<SubTexture name="Button_Logout_Pressed" x="303" y="539" width="62" height="62"/>
+	<SubTexture name="Button_Rate" x="361" y="885" width="62" height="62"/>
+	<SubTexture name="Button_Rate_Pressed" x="360" y="365" width="62" height="62"/>
+	<SubTexture name="Button_Share" x="297" y="821" width="62" height="62"/>
+	<SubTexture name="Button_Share_Pressed" x="303" y="475" width="62" height="62"/>
+	<SubTexture name="Button_Shop" x="368" y="949" width="62" height="62"/>
+	<SubTexture name="Button_Shop_Pressed" x="367" y="493" width="62" height="62"/>
+	<SubTexture name="Button_Trash" x="367" y="429" width="62" height="62"/>
+	<SubTexture name="Button_Trash_Pressed" x="361" y="821" width="62" height="62"/>
+	<SubTexture name="LevelThing" x="196" y="844" width="99" height="21"/>
+	<SubTexture name="LevelThing_Selected" x="196" y="821" width="99" height="21"/>
+	<SubTexture name="LevelthingBG" x="196" y="867" width="99" height="75"/>
+	<SubTexture name="LevelthingBG_Selected" x="202" y="475" width="99" height="75"/>
+	<SubTexture name="StandingCircle" x="202" y="552" width="40" height="40"/>
+	<SubTexture name="TitleButton_Adventure" x="196" y="605" width="194" height="70"/>
+	<SubTexture name="TitleButton_Adventure_Pressed" x="0" y="893" width="194" height="70"/>
+	<SubTexture name="TitleButton_BossFight" x="0" y="821" width="194" height="70"/>
+	<SubTexture name="TitleButton_BossFight_Disabled" x="0" y="749" width="194" height="70"/>
+	<SubTexture name="TitleButton_BossFight_Pressed" x="0" y="677" width="194" height="70"/>
+	<SubTexture name="TitleButton_EnterArena" x="0" y="965" width="182" height="56"/>
+	<SubTexture name="TitleButton_EnterArena_Pressed" x="184" y="965" width="182" height="56"/>
+	<SubTexture name="TitleButton_ResumeGame" x="0" y="540" width="200" height="63"/>
+	<SubTexture name="TitleButton_ResumeGame_Pressed" x="0" y="475" width="200" height="63"/>
+	<SubTexture name="TitleButton_Survival" x="0" y="605" width="194" height="70"/>
+	<SubTexture name="TitleButton_Survival_Disabled" x="196" y="749" width="194" height="70"/>
+	<SubTexture name="TitleButton_Survival_Pressed" x="196" y="677" width="194" height="70"/>
+	<SubTexture name="Title_Arena" x="0" y="267" width="398" height="96"/>
+	<SubTexture name="Title_Boss" x="0" y="0" width="454" height="106"/>
+	<SubTexture name="Title_Hoptron" x="0" y="108" width="398" height="157"/>
+	<SubTexture name="Title_Loading" x="0" y="365" width="358" height="108"/>
+</TextureAtlas>

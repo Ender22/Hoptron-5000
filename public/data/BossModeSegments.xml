@@ -1,0 +1,253 @@
+﻿<SEGMENTS>	
+	
+//fruit 1
+	<level> 
+				
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 0 </bossWarning> 
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="0" spawnFreq="100"> watermelon </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 5 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>
+		
+	</level>
+	
+//fruit 2	
+	<level>							
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 1 </bossWarning> 
+		</segment>
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="1" spawnFreq="100"> durian </boss>
+		</segment>
+				
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 5 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+				<shopkeeper> 1 </shopkeeper> 
+		</segment>
+			
+	</level>
+	
+//veg
+	<level>			
+							
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 0 </bossWarning> 
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="0" spawnFreq="100"> eggplant </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 6 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+				<shopkeeper> 1 </shopkeeper> 
+		</segment>
+	</level>
+//veg 2	
+	<level>				
+					
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 1 </bossWarning> 
+		</segment>
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="1" spawnFreq="100"> pumpkin </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 6 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+				<shopkeeper> 1 </shopkeeper> 
+		</segment>
+						
+	</level>
+	
+//desserts
+	<level>		
+					
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 0 </bossWarning> 
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="0" spawnFreq="100"> sundae </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 7 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>
+			
+	</level>
+//dessert 2	
+	<level>				
+				
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 1 </bossWarning> 
+		</segment>
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="1" spawnFreq="100"> cake </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 7 </rewardChest> 
+		</segment>
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>		
+	</level>
+	
+//asian	
+
+	<level>	
+					
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 0 </bossWarning> 
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="0" spawnFreq="100"> noodles </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 8 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>	
+	</level>
+	
+//asian 2	
+	<level>				
+					
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 1 </bossWarning> 
+		</segment>
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="1" spawnFreq="100"> salmon </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 8 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>	
+			
+	</level>
+	
+//fast food	
+	
+	<level>								
+					
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 0 </bossWarning> 
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="0" spawnFreq="100"> hamburger </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 9 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>	
+		
+	</level>
+//ffood 2	
+	<level>						
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="3">
+			<bossWarning> 1 </bossWarning> 
+		</segment>
+			
+		<segment delay="1" maxEnemies="0" minEnemies="0">	
+			<boss id="1" spawnFreq="100"> combo </boss>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 9 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>		
+</level>
+		
+//burrito	
+
+	<level>		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="4">
+			<bossWarning> 2 </bossWarning> 
+		</segment>			
+		
+		<segment maxEnemies="1" minEnemies="1" continueAfterKills="1">		
+			<enemy id="0" spawnFreq="100"> burrito </enemy>
+		</segment>
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 10 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>	
+		
+	</level>
+	
+//mm	
+	
+	<level>	
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="1">			
+		</segment>	
+		
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="4">
+			<bossWarning> 3 </bossWarning> 
+		</segment>		
+		
+		<segment maxEnemies="1" minEnemies="1" continueAfterKills="2">		
+			<enemy id="0" spawnFreq="100"> magicman </enemy>
+		</segment>	
+		
+		<segment delay="1" maxEnemies="0" minEnemies="0" continueAfterTime="5">
+			<rewardChest> 10 </rewardChest> 
+		</segment>
+			
+		<segment maxEnemies="0" minEnemies="0" continueAfterTime="7">
+			<shopkeeper> 1 </shopkeeper> 
+		</segment>	
+		
+	</level>
+	
+</SEGMENTS>

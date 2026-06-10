@@ -1,0 +1,284 @@
+/**
+ * Hoptron player controller.
+ *
+ * Physics + animation transitions ported from LevelBase.updateBunny /
+ * doBunnyJump / onAttackTouch / attackAgainTime, with the agreed v1 retune:
+ * faster acceleration, double jump (airJump), dash on a button, and
+ * buffered button combos instead of touch taps. All per-frame constants
+ * assume the original's 60fps step — the game loop runs a fixed 60Hz tick.
+ */
+import type { SpriterPlayer } from '../spriter/SpriterPlayer';
+import type { Input } from './Input';
+
+// ---- original feel constants (LevelBase) ----
+export const GROUND_Y = 325;
+export const WALL_LEFT = 40;
+export const WALL_RIGHT = 760;
+const FRICTION = 0.8;
+const BUNNY_SCALE = 0.375;
+
+// ---- v1 retune (original values in comments) ----
+const GRAVITY = 0.85; // 0.8
+const JUMP_VELOCITY = -12; // -11
+const DOUBLE_JUMP_VELOCITY = -10.5; // (no double jump in original)
+const ACCELERATION = 1.3; // 0.7 — snappier starts
+const MAX_MOVE_SPEED = 10.5; // 10
+const DASH_SPEED = 19;
+const DASH_TIME = 0.16; // s
+const DASH_COOLDOWN = 0.32; // s
+const JUMP_BUFFER = 0.12; // s
+const COYOTE_TIME = 0.08; // s
+const ATTACK_BUFFER = 0.3; // s
+
+interface ComboStage {
+  anim: string;
+  nextAnim: string;
+  /** time before the chain window check (original resetBunnyAttackTimer values) */
+  chainTime: number;
+  impulse: number;
+}
+
+// original 4-hit chain: anims + forward impulses from onAttackTouch/attackAgainTime
+const COMBO: ComboStage[] = [
+  { anim: 'attack1', nextAnim: '', chainTime: 0.22, impulse: 8 }, // 0.25 original
+  { anim: 'attack1_to_2', nextAnim: 'attack2_to_idle', chainTime: 0.22, impulse: 7 },
+  { anim: 'attack2_to_3', nextAnim: 'attack3_to_idle', chainTime: 0.4, impulse: 4 }, // 0.45 original
+  { anim: 'attack3_to_4', nextAnim: '', chainTime: 0.5, impulse: 6 },
+];
+
+type State = 'ground' | 'air' | 'dash' | 'attack';
+
+export class PlayerController {
+  x = 400;
+  y = GROUND_Y;
+  xVel = 0;
+  yVel = 0;
+  facing = 1; // 1 right, -1 left
+  state: State = 'ground';
+  onGround = true;
+
+  /** i-frames flag (dash) — combat will honor this */
+  invincible = false;
+
+  private spriter: SpriterPlayer;
+  private input: Input;
+
+  private jumpsUsed = 0;
+  private coyoteTimer = 0;
+  private dashTimer = 0;
+  private dashCooldown = 0;
+  private comboStage = -1;
+  private comboTimer = 0;
+  private attackQueued = false;
+
+  constructor(spriter: SpriterPlayer, input: Input) {
+    this.spriter = spriter;
+    this.input = input;
+    spriter.scale.set(BUNNY_SCALE);
+    spriter.playAnim('idle');
+    this.applyTransform();
+  }
+
+  /** fixed 60Hz tick; dt is always 1/60 but passed for the spriter clock */
+  update(dt: number): void {
+    this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+
+    switch (this.state) {
+      case 'dash':
+        this.updateDash(dt);
+        break;
+      case 'attack':
+        this.updateAttack(dt);
+        break;
+      default:
+        this.updateMove(dt);
+    }
+
+    this.integrate();
+    this.applyTransform();
+    this.spriter.advanceTime(dt);
+  }
+
+  // ---- movement (ground + air) ----
+  private updateMove(dt: number): void {
+    const axis = this.input.axisX;
+
+    if (axis !== 0) {
+      this.xVel += ACCELERATION * axis;
+      if (this.xVel > MAX_MOVE_SPEED) this.xVel = MAX_MOVE_SPEED;
+      if (this.xVel < -MAX_MOVE_SPEED) this.xVel = -MAX_MOVE_SPEED;
+      this.face(Math.sign(axis));
+      if (this.onGround && this.spriter.currentAnimationName !== 'Run') {
+        this.spriter.playAnim('Run');
+      }
+    } else {
+      // original: friction when no input; stop + idle below accel/4 threshold
+      this.xVel *= FRICTION;
+      if (this.onGround) {
+        if (Math.abs(this.xVel) > 3 && this.spriter.currentAnimationName === 'Run') {
+          this.spriter.playAnim('Slow'); // skid
+        } else if (Math.abs(this.xVel) < ACCELERATION / 4) {
+          this.xVel = 0;
+          if (this.spriter.currentAnimationName === 'Slow' || this.spriter.currentAnimationName === 'Run') {
+            this.spriter.playAnim('idle');
+          }
+        }
+      }
+    }
+
+    // jump (buffered + coyote)
+    if (this.input.buffered('jump', JUMP_BUFFER)) {
+      if (this.onGround || this.coyoteTimer > 0) {
+        this.input.consumeBuffer('jump');
+        this.doJump(false);
+      } else if (this.jumpsUsed < 2) {
+        this.input.consumeBuffer('jump');
+        this.doJump(true);
+      }
+    }
+
+    // dash
+    if (this.input.buffered('dash', 0.1) && this.dashCooldown <= 0) {
+      this.input.consumeBuffer('dash');
+      this.startDash();
+      return;
+    }
+
+    // attack
+    if (this.input.buffered('attack', 0.1)) {
+      this.input.consumeBuffer('attack');
+      this.startCombo();
+      return;
+    }
+
+    if (!this.onGround) {
+      this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
+    }
+  }
+
+  private doJump(double: boolean): void {
+    if (double) {
+      this.yVel = DOUBLE_JUMP_VELOCITY;
+      this.jumpsUsed = 2;
+      this.spriter.playAnim('airJump', 'idle_air', null, true);
+    } else {
+      this.yVel = JUMP_VELOCITY;
+      this.jumpsUsed = 1;
+      this.coyoteTimer = 0;
+      this.spriter.playAnim('jump_straight', 'idle_air', null, true);
+    }
+    this.onGround = false;
+    this.state = 'air';
+  }
+
+  // ---- dash ----
+  private startDash(): void {
+    this.state = 'dash';
+    this.dashTimer = DASH_TIME;
+    this.dashCooldown = DASH_COOLDOWN;
+    this.invincible = true;
+    const dir = this.input.axisX !== 0 ? Math.sign(this.input.axisX) : this.facing;
+    this.face(dir);
+    this.xVel = DASH_SPEED * dir;
+    this.yVel = 0;
+    this.spriter.playAnim('dash_forward', this.onGround ? 'idle' : 'idle_air', null, true);
+  }
+
+  private updateDash(dt: number): void {
+    this.dashTimer -= dt;
+    if (this.dashTimer <= 0) {
+      this.invincible = false;
+      this.xVel *= 0.5;
+      this.state = this.onGround ? 'ground' : 'air';
+      if (this.onGround) this.spriter.playAnim(this.input.axisX !== 0 ? 'Run' : 'idle');
+    }
+  }
+
+  // ---- attack combo ----
+  private startCombo(): void {
+    this.state = 'attack';
+    this.comboStage = 0;
+    this.beginComboStage();
+  }
+
+  private beginComboStage(): void {
+    const stage = COMBO[this.comboStage];
+    this.comboTimer = stage.chainTime;
+    this.attackQueued = false;
+    this.xVel = stage.impulse * this.facing;
+    const last = this.comboStage === COMBO.length - 1;
+    this.spriter.playAnim(stage.anim, '', null, true, last);
+  }
+
+  private updateAttack(dt: number): void {
+    // original: attack decelerates with *0.98 per frame
+    this.xVel *= 0.98;
+    this.comboTimer -= dt;
+
+    if (this.input.justPressed('attack')) this.attackQueued = true;
+
+    if (this.comboTimer <= 0) {
+      if (this.attackQueued && this.comboStage < COMBO.length - 1) {
+        this.comboStage++;
+        this.beginComboStage();
+      } else {
+        // recover to idle via the matching transition anim
+        const recover = ['attack1_to_idle', 'attack2_to_idle', 'attack3_to_idle', 'attack4_to_idle'][this.comboStage];
+        this.comboStage = -1;
+        this.state = this.onGround ? 'ground' : 'air';
+        this.spriter.playAnim(recover, this.onGround ? 'idle' : 'idle_air');
+      }
+    }
+  }
+
+  // ---- shared physics ----
+  private integrate(): void {
+    this.x += this.xVel;
+    this.y += this.yVel;
+
+    if (!this.onGround && this.state !== 'dash') {
+      this.yVel += GRAVITY;
+    }
+
+    // ground
+    if (this.y >= GROUND_Y) {
+      this.y = GROUND_Y;
+      this.yVel = 0;
+      if (!this.onGround) {
+        this.onGround = true;
+        this.jumpsUsed = 0;
+        if (this.state === 'air') {
+          this.state = 'ground';
+          if (this.input.axisX !== 0) {
+            this.spriter.playAnim('Run');
+          } else if (Math.abs(this.xVel) > 3) {
+            this.spriter.playAnim('Slow');
+          } else {
+            this.spriter.playAnim('land', 'idle');
+          }
+        }
+      }
+    } else if (this.y < GROUND_Y && this.onGround) {
+      this.onGround = false;
+      this.coyoteTimer = COYOTE_TIME;
+    }
+
+    // walls (original bounces with *-0.8)
+    if (this.x > WALL_RIGHT) {
+      this.x = WALL_RIGHT;
+      this.xVel *= -0.8;
+    } else if (this.x < WALL_LEFT) {
+      this.x = WALL_LEFT;
+      this.xVel *= -0.8;
+    }
+  }
+
+  private face(dir: number): void {
+    if (dir !== 0) this.facing = dir;
+  }
+
+  private applyTransform(): void {
+    this.spriter.position.set(this.x, this.y);
+    this.spriter.scale.set(BUNNY_SCALE * this.facing, BUNNY_SCALE);
+  }
+}

@@ -1,0 +1,425 @@
+﻿<ACHIEVEMENTS v="1.003">		
+
+	<achievement>		
+		<id> 001 </id>				
+		<type> progress </type>
+		<name> Killing Machine </name>
+		<endValue> 500 </endValue> 
+		<description> Kill 500 Total Enemies </description>
+		<reward> 115 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 002 </id>				
+		<type> instant </type>
+		<name> Power Slash </name>
+		<endValue> 1 </endValue>
+		<description> Kill 5 Enemies with a single slash </description>
+		<reward> 120 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 003 </id>				
+		<type> instant </type>
+		<name> Serious Skills </name>
+		<endValue> 15 </endValue>
+		<description> Defeat 15 badguys without taking damage </description>
+		<reward> 125 </reward>		
+	</achievement>
+	
+			<achievement>		
+				<id> 004 </id>				
+				<type> instant </type>
+				<name> Bullet Proof </name>
+				<endValue> 1 </endValue>
+				<description> Beat the Watermelon without getting shot </description>
+				<reward> 500 </reward>		
+			</achievement>
+	
+	<achievement>		
+		<id> 005 </id>				
+		<type> instant </type>
+		<name> Rampage </name>
+		<endValue> 250 </endValue>
+		<description> Kill 250 Enemies before dying </description>
+		<reward> 135 </reward>		
+	</achievement>
+		
+	<achievement>		
+		<id> 006 </id>				
+		<type> instant </type>
+		<name> C-C-C-Combo </name>
+		<endValue> 10 </endValue>
+		<description> Gain a combo multiplyer of 10 or higher </description>
+		<reward> 140 </reward>		
+	</achievement>
+			
+	<achievement>		
+		<id> 007 </id>				
+		<type> instant </type>
+		<name> Money Maker </name>
+		<endValue> 1000 </endValue>
+		<description> Collect 1000 coins in a single game </description>
+		<reward> 145 </reward>		
+	</achievement>
+	
+			<achievement>
+				<id> 008 </id>				
+				<type> instant </type>
+				<name> Power Stealer </name>
+				<endValue> 1 </endValue>
+				<description> Destroy both of the Durian's swastika's with a single slash </description>
+				<reward> 550 </reward>		
+			</achievement>
+	
+	<achievement>		
+		<id> 009 </id>				
+		<type> progress </type>
+		<name> Shuriken Master </name>
+		<endValue> 200 </endValue>
+		<description> Kill 200 total bad guys using ninja stars </description>
+		<reward> 155 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 010 </id>				
+		<type> progress </type>
+		<name> Make it Rain </name>
+		<endValue> 5000 </endValue>
+		<description> Collect 5,000 total coins </description>
+		<reward> 160 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 011 </id>				
+		<type> instant </type>
+		<name> True Gamer </name>
+		<endValue> 100000 </endValue>
+		<description> Get a score higher than 100,000 </description>
+		<reward> 165 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 012 </id>				
+		<type> instant </type>
+		<name> Wish Upon a Ninja Star </name>
+		<endValue> 50 </endValue>
+		<description> Kill 50 bad guys using Ninja Stars in a single game </description>
+		<reward> 170 </reward>		
+	</achievement>
+	
+		<achievement>		
+			<id> 013 </id>				
+			<type> instant </type>
+			<name> Street Fighter </name>
+			<endValue> 1 </endValue>
+			<description> Defeat the Eggplant without using Ninja Stars </description>
+			<reward> 600 </reward>		
+		</achievement>
+		
+
+	<achievement>		
+		<id> 014 </id>				
+		<type> progress </type>
+		<name> Killing Machine II </name>
+		<endValue> 1500 </endValue>
+		<description> Kill 1500 More Enemies </description>
+		<reward> 180 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 015 </id>				
+		<type> instant </type>
+		<name> Power Slash II </name>
+		<endValue> 1 </endValue>
+		<description> Kill 7 Enemies with a single slash </description>
+		<reward> 185 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 016 </id>				
+		<type> instant </type>
+		<name> Serious Skills II </name>
+		<endValue> 35 </endValue>
+		<description> Defeat 35 badguys without taking damage </description>
+		<reward> 190 </reward>		
+	</achievement>
+	
+			<achievement>		
+				<id> 017 </id>				
+				<type> instant </type>
+				<name> Can't Slash This </name>
+				<endValue> 1 </endValue>
+				<description> Defeat the Pumpkin without getting slashed by his knives </description>
+				<reward> 650 </reward>		
+			</achievement>
+	
+	<achievement>
+		<id> 018 </id>				
+		<type> instant </type>
+		<name> Rampage II </name>
+		<endValue> 500 </endValue>
+		<description> Kill 500 Enemies before dying </description>
+		<reward> 200 </reward>		
+	</achievement>
+		
+	<achievement>		
+		<id> 019 </id>				
+		<type> instant </type>
+		<name> C-C-C-Combo II </name>
+		<endValue> 15 </endValue>
+		<description> Gain a combo multiplyer of 15 or higher </description>
+		<reward> 205 </reward>		
+	</achievement>
+			
+	<achievement>		
+		<id> 020 </id>				
+		<type> instant </type>
+		<name> Money Maker II </name>
+		<endValue> 2000 </endValue>
+		<description> Collect 2000 coins in a single game </description>
+		<reward> 210 </reward>		
+	</achievement>
+	
+		
+		<achievement>		
+			<id> 021 </id>				
+			<type> instant </type>
+			<name> 5 Second Rule </name>
+			<endValue> 1 </endValue>
+			<description> Slash all of the Sundae's projectiles before they touch the ground </description>
+			<reward> 700 </reward>		
+		</achievement>
+		
+	<achievement>		
+		<id> 022 </id>				
+		<type> progress </type>
+		<name> Shuriken Master II </name>
+		<endValue> 500 </endValue>
+		<description> Kill 500 total bad guys using ninja stars </description>
+		<reward> 220 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 023 </id>				
+		<type> progress </type>
+		<name> Make it Rain II </name>
+		<endValue> 15000 </endValue>
+		<description> Collect 15,000 total coins </description>
+		<reward> 225 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 024 </id>				
+		<type> instant </type>
+		<name> True Gamer II </name>
+		<endValue> 225000 </endValue>
+		<description> Get a score higher than 225,000 </description>
+		<reward> 230 </reward>		
+	</achievement>
+			
+	<achievement>		
+		<id> 025 </id>				
+		<type> instant </type>
+		<name> Wish Upon a Ninja Star II </name>
+		<endValue> 150 </endValue>
+		<description> Kill 150 bad guys using Ninja Stars in a single game </description>
+		<reward> 235 </reward>		
+	</achievement>
+	
+
+	
+	<achievement>		
+		<id> 026 </id>				
+		<type> instant </type>
+		<name> Invincible </name>
+		<endValue> 1 </endValue>
+		<description> Defeat any boss without taking any damage </description>
+		<reward> 240 </reward>		
+	</achievement>	
+	
+			<achievement>		
+				<id> 027 </id>				
+				<type> instant </type>
+				<name> Happy Birthday to the Ground </name>
+				<endValue> 1 </endValue>
+				<description> Put out all of the Cake's candle's in less than 3 seconds </description>
+				<reward> 750 </reward>		
+			</achievement>
+			
+	<achievement>		
+		<id> 028 </id>				
+		<type> instant </type>
+		<name> Power Slash III </name>
+		<endValue> 1 </endValue>
+		<description> Kill 9 Enemies with a single slash </description>
+		<reward> 250 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 029 </id>				
+		<type> instant </type>
+		<name> Broken Sword </name>
+		<endValue> 1 </endValue>
+		<description> Defeat any boss using only Ninja stars </description>
+		<reward> 255 </reward>		
+	</achievement>	
+	
+	<achievement>		
+		<id> 030 </id>				
+		<type> instant </type>
+		<name> Serious Skills III </name>
+		<endValue> 70 </endValue>
+		<description> Defeat 70 badguys without taking damage </description>
+		<reward> 260 </reward>		
+	</achievement>
+				
+	
+	<achievement>		
+		<id> 031 </id>				
+		<type> instant </type>
+		<name> Rampage III </name>
+		<endValue> 750 </endValue>
+		<description> Kill 750 Enemies before dying </description>
+		<reward> 265 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 032 </id>				
+		<type> instant </type>
+		<name> Distance Runner </name>
+		<endValue> 1 </endValue>
+		<description> Complete at least 3 levels without dying </description>
+		<reward> 270 </reward>		
+	</achievement>
+	
+			<achievement>		
+				<id> 033 </id>				
+				<type> instant </type>
+				<name> Calculated Battle </name>
+				<endValue> 1 </endValue>
+				<description> Defeat the Bowl-of-Noodles without hitting him while he is defending </description>
+				<reward> 800 </reward>		
+			</achievement>		
+			
+	<achievement>		
+		<id> 034 </id>				
+		<type> instant </type>
+		<name> C-C-C-Combo III </name>
+		<endValue> 20 </endValue>
+		<description> Gain a combo multiplyer of 20 or higher </description>
+		<reward> 280 </reward>		
+	</achievement>
+			
+	<achievement>		
+		<id> 035 </id>				
+		<type> instant </type>
+		<name> Money Maker III </name>
+		<endValue> 5000 </endValue>
+		<description> Collect 5000 coins in a single game </description>
+		<reward> 285 </reward>		
+	</achievement>
+	
+					
+	
+	<achievement>		
+		<id> 036 </id>				
+		<type> instant </type>
+		<name> True Gamer III </name>
+		<endValue> 300000 </endValue>
+		<description> Get a score higher than 300,000 </description>
+		<reward> 290 </reward>		
+	</achievement>
+	
+	
+	<achievement>		
+		<id> 037 </id>				
+		<type> progress </type>
+		<name> Swift as the Wind </name>
+		<endValue> 5 </endValue>
+		<description> Dodge 5 attacks with the dodge shoes </description>
+		<reward> 295 </reward>		
+	</achievement>
+	
+		<achievement>		
+			<id> 038 </id>				
+			<type> instant </type>
+			<name> Something Fishy </name>
+			<endValue> 1 </endValue>
+			<description> Defeat the Sushi Chef without getting hit by his fish </description>
+			<reward> 850 </reward>		
+		</achievement>
+				
+	<achievement>		
+		<id> 039 </id>				
+		<type> instant </type>
+		<name> Suited Up </name>
+		<endValue> 1 </endValue>
+		<description> Equip the Diamond Armor from the in-game store </description>
+		<reward> 305 </reward>		
+	</achievement>
+		
+	<achievement>		
+		<id> 040 </id>				
+		<type> instant </type>
+		<name> ULTIMATE Rampage! </name>
+		<endValue> 1000 </endValue>
+		<description> Kill 1000 Enemies before dying </description>
+		<reward> 310 </reward>		
+	</achievement>	
+		
+	<achievement>		
+		<id> 041 </id>				
+		<type> instant </type>
+		<name> ULTIMATE Skills! </name>
+		<endValue> 125 </endValue>
+		<description> Defeat 125 badguys without taking damage </description>
+		<reward> 315 </reward>		
+	</achievement>
+	
+		<achievement>		
+			<id> 042 </id>				
+			<type> instant </type>
+			<name> Not Hungry </name>
+			<endValue> 1 </endValue>
+			<description> Beat the hamburger without getting chewed </description>
+			<reward> 900 </reward>		
+		</achievement>
+		
+	<achievement>		
+		<id> 043 </id>				
+		<type> instant </type>
+		<name> Stay Fresh </name>
+		<endValue> 1 </endValue>
+		<description> Equip armor and prevent it from breaking for 5 minutes </description>
+		<reward> 325 </reward>		
+	</achievement>
+	
+	<achievement>		
+		<id> 044 </id>				
+		<type> instant </type>
+		<name> Distance Runner II </name>
+		<endValue> 4 </endValue>
+		<description> Complete at least 4 levels without dying </description>
+		<reward> 330 </reward>		
+	</achievement>	
+			
+		<achievement>		
+			<id> 045 </id>				
+			<type> instant </type>
+			<name> Speed Fight </name>
+			<endValue> 1 </endValue>
+			<description> Defeat the Fast-Food Boss in less than 2 minutes </description>
+			<reward> 950 </reward>		
+		</achievement>
+	
+	<achievement>		
+		<id> 046 </id>				
+		<type> instant </type>
+		<name> ULTIMATE Gamer! </name>
+		<endValue> 500000 </endValue>
+		<description> Get a score higher than 500,000 </description>
+		<reward> 1000 </reward>		
+	</achievement>
+	
+</ACHIEVEMENTS>

@@ -1,0 +1,88 @@
+﻿<TUTORIAL>		
+	<tip> 	
+		<text> Hey... Hey you! You wanna buy some awesomeness? </text>
+	</tip>
+	<tip> 	
+		<text> Wait... you aint a cop are ya!? You willing to prove it!? </text>
+	</tip>
+	<tip x="200" y="200"> 	
+		<text> You look quick. You know you can press left or right to run right? Try it! </text>
+		<arrow d="down" x="110" y="300"> </arrow>
+		<wait> 1 </wait>
+	</tip>
+	<tip x="570" y="175" width="350" height="170"> 	
+		<text> Tap this circle to slash with that sweet sword of yours. Tapping multiple times quickly will do a combo. Try it out. </text>
+		<arrow d="down" x="700" y="300"> </arrow>
+		<wait> 2 </wait>
+	</tip>
+	<tip> 	
+		<text> Prove you aint no cop! Take out these evil apples! Don't let them touch you! </text>
+		<spawnEnemies> 1 </spawnEnemies>
+		<wait> 3 </wait>
+	</tip>
+	<tip> 	
+		<text> Nice! Nothin better then the smell of exploding evil food in the morning.  </text>
+	</tip>
+	<tip x="580" y="175" width="340" height="170"> 	
+		<text> You got some powerful robo legs don'tcha? Slide your finger on this circle to jump in any direction.  </text>
+		<arrow d="down" x="700" y="300"> </arrow>
+		<wait> 4 </wait>
+	</tip>
+	<tip> 	
+		<text> Try a double jump by swiping your finger a 2nd time after you are already airborn. </text>
+		<wait> 5 </wait>
+	</tip>
+	<tip> 	
+		<text> When there are enemies in range, instead of jumping, sliding your finger towards them will perform a super-slash! </text>
+	</tip>
+	<tip x="620"> 	
+		<text> Slide your finger towards these fools to waste them! </text>
+		<wait> 6 </wait>
+		<spawnEnemies> 2 </spawnEnemies>
+	</tip>
+	<tip x="200" y="200" width="340" height="170"> 
+		<text> Haha! You aint no cop that's for sure. I'll hook you up with some Ninja Stars, on-the-house. </text>
+		<arrow d="up" x="210" y="85"> </arrow>
+	</tip>
+	<tip x="400" y="160" width="385" height="180"> 	
+		<text> Press anywhere to throw a Ninja Star in that direction. Hold your finger down to keep throwing. </text>		
+		<setAlpha> </setAlpha>
+		<wait> 7 </wait>
+	</tip>
+	<tip x="400" y="160"> 	
+		<text> Good! Aw snap- evil banana's incoming. Take them out with your Ninja Stars! </text>
+		<wait> 8 </wait>
+		<spawnEnemies> 3 </spawnEnemies>
+		<setAlpha> </setAlpha>
+	</tip>
+	<tip> 	
+		<text> Nicely done! Well that's all I- Uh oh... A big group of evil nastiness is incoming! </text>		
+	</tip>
+	<tip x="600" width="400" height="175"> 	
+		<text> Crap, it looks too difficult for the tutorial! I'm outta here! Put what you learned together to take them out! </text>				
+		<runAway> </runAway> 
+	</tip>
+	<tip>
+		<spawnEnemies> 4 </spawnEnemies>
+		<wait> 9 </wait>
+	</tip>
+	<tip x="400" width="420" height="180"> 	
+		<text> Sweet! Hoptron you're one cool bot. I'll be sure to come back with the 'good stuff' later. Gather up some loot, my products aint cheap! </text>
+	</tip>
+	<extratip width="400" height="170">
+		<text> Looks like more are coming. Try to take them out using a super slash instead. Slide your finger in the direction you want to slash. </text>
+		<wait> 6 </wait>
+		<spawnEnemies> 2 </spawnEnemies>
+	</extratip>
+	<extratip x="400" y="160" width="400" height="170">
+		<text> More are coming. Take them out using your Ninja Stars instead. Just press your finger on their stupid faces! </text>
+		<wait> 8 </wait>
+		<spawnEnemies> 3 </spawnEnemies>
+		<setAlpha> </setAlpha>
+	</extratip>
+	<extratip>
+		<text> You're looking a little wrecked Hoptron. Fix yourself up with this health potion, my treat. </text>
+		<wait> 10 </wait>
+		<healthPotion> </healthPotion> 
+	</extratip>
+</TUTORIAL>

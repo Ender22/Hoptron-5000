@@ -1,0 +1,1889 @@
+﻿<SCENES>
+	<MAIN_SCENES>	
+		<scene id="0">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "Well well well, if it isn't Hoptron the Samurai Bunny idiot. Why didn't you get killed!?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "... Because I'm awesome." </hoptron>
+			</action>			
+			<action>
+				<magicMan> "Not as awesome as these dance moves." </magicMan>
+				<mm_animation nextAnimation=""> dance01 </mm_animation>
+			</action>			
+			<action>
+				<hoptron> "..." </hoptron>
+			</action>
+			<action>
+				<hoptron> "... I could dance like that... If I felt like it." </hoptron>
+			</action>			
+			<action>
+				<hoptron> "Anyway, it's obvious that I kick ass, now gimme back my burrito before I kick yours! " </hoptron>
+			</action>			
+			<action>
+				<mm_animation> idle </mm_animation>
+				<magicMan> "Now-now Hoptron, we can't disappoint our fans with such a quick game, you've only beaten the first level! " </magicMan>
+			</action>
+			<action>
+				<magicMan> "There's a long way to go before you'll be able to put this sweet tasty burrito in your mouth again. " </magicMan>
+			</action>
+			<action>
+				<hoptron> "Why'd you have to make that sound so dirty?" </hoptron>
+			</action>
+			<action>
+				<mm_animation> wink01 </mm_animation>
+				<magicMan> * wink wink * </magicMan>
+			</action>
+			<action>
+				<hoptron> "... Stop that. " </hoptron>
+			</action>			
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		<scene id="101">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "Hey man... umm... wow.... okay... so there's something I forgot to tell you when you beat level 1. " </magicMan>
+			</action>
+			<action>
+				<hoptron> "...What?" </hoptron>
+			</action>
+			<action>
+				<magicMan> "Umm... are you sitting down?... Can you sit down? " </magicMan>
+			</action>
+			<action>
+				<magicMan> "... Ok... umm... yea.... this is... gonna be a bit difficult to tell you...  " </magicMan>
+			</action>
+			<action>
+				<hoptron> "...?" </hoptron>
+			</action>
+			<action>
+				<magicMan> "..." </magicMan>
+			</action>
+			<action>
+				<hoptron> "...??" </hoptron>
+			</action>
+			<action continueTime="4">
+				<sound> Fart1 </sound>
+				<trigger> mm_flip </trigger>						
+				<magicMan> * FFFAAARRRTTT!!! * </magicMan>
+				<mm_animation nextAnimation="fartIdle"> startFart </mm_animation>						
+				<trigger> disableContinuePress </trigger>
+			</action>
+			<action continueTime="0.6">
+				<stopmusic> </stopmusic>
+				<mm_animation nextAnimation="idle"> finishFart </mm_animation>
+			</action>					
+			<action>
+				<normalmusic> </normalmusic>
+				<trigger> mm_flip </trigger>	
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<magicMan> "HAHAHAHAHAHA" </magicMan>
+			</action>
+			<action>
+				<magicMan> "Oh and as a bonus for beating the fruit world for the very first time... I'm stealing all the upgrades you bought from the shopkeeper." </magicMan>
+			</action>
+			<action>
+				<trigger> StealUpgrades </trigger>
+			</action>
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<hoptron> "...god dammit." </hoptron>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		
+		<scene>
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>																			
+			<action>
+				<hoptron> "Makin a bunny fight carrots?" </hoptron>
+			</action>
+			<action>
+				<hoptron> "That's just sick man... I used to love carrots." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Ya well you also used to love your burrito... and you'll never get that back either!" </magicMan>
+			</action>		
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<magicMan> "HAHHAHAHAAHA!" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Just you wait... Magic jerk..." </hoptron>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+				
+		<scene id="1">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "Alright Hoptron. I've had a change of heart.  The medical bills for these nasty food monsters are too high so it's time to give you back your burrito and end this madness. " </magicMan>
+			</action>
+			<action>
+				<hoptron> "... Now you're talking." </hoptron>
+			</action>			
+			<action>
+				<trigger> giveBurritoSequence1 </trigger>				
+			</action>			
+			<action>
+				<trigger> shootBurrito01 </trigger>				
+			</action>					
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<magicMan> "HAHHAHAHAAHA! I don't pay their medical bills you idiot-face!" </magicMan>
+			</action>		
+			<action>
+				<magicMan> "Oh and since it's your first time... I'm gonna do the upgrade steal thing again" </magicMan>
+			</action>
+			<action>
+				<trigger> StealUpgrades </trigger>
+			</action>
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<hoptron> "My revenge will be swift and absolute." </hoptron>
+			</action>			
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		
+		<scene>
+				<action delay="1" continueTime="0.1"> 
+					<trigger> BlurBG </trigger>
+					<trigger> TweenInTalkSequence </trigger>
+				</action>																											
+				<action>						
+					<ht_animation nextAnimation="idle_holdPicture"> grabPicture </ht_animation>
+					<hoptron> "Hey magic man, I drew this picture of you. Wanna see!?" </hoptron>
+				</action>
+				<action>
+					<magicMan> "Oh really? Did you capture my beauty and gracefulness?" </magicMan>
+				</action>
+				<action>
+					<ht_animation nextAnimation="idle_showPicture"> showPicture </ht_animation>						
+					<hoptron> "Look!" </hoptron>
+				</action>
+				<action>
+					<magicMan> "Jerkface." </magicMan>
+				</action>			
+				<action continueTime="0.5">
+					<ht_animation nextAnimation="lookAtPortalIdle"> putAwayPicture </ht_animation>	
+				</action>
+				<action delay="1" continueTime="0.2"> 
+					<trigger> UnBlurBG </trigger>				
+				</action>
+		</scene>
+			
+		<scene id="2">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "... You're still here? How have you not died by now!? " </magicMan>
+			</action>
+			<action>
+				<hoptron> "Actually... I feel like I did die... like a bunch of times..." </hoptron>
+			</action>			
+			<action>
+				<magicMan> "... That's some Bull!! When you die you get to respawn!? And like when I die one time you're gonna beat the game! Talk about double standards! " </magicMan>
+			</action>
+			<action>
+				<magicMan> "From now on there's a new rule. You only have 1 more life. You die one more time, and the game will delete your save file and reset all of your progress. " </magicMan>
+			</action>
+			<action>
+				<hoptron> "WHAT!? REALLY!?" </hoptron>
+			</action>						
+			<action>
+				<magicMan> "..." </magicMan>
+			</action>
+			<action>
+				<magicMan> "...No, not really... Only the game designer has that kind of power." </magicMan>
+			</action>
+			<action>
+				<magicMan> "I heard he's very handsome..." </magicMan>
+			</action>
+			<action>
+				<hoptron> "...and charming." </hoptron>
+			</action>
+			<action>
+				<magicMan> "...and he's got a very big-" </magicMan>
+			</action>
+			<action>
+				<hoptron> "-Heart. A very big heart. " </hoptron>
+			</action>
+			<action>
+				<magicMan> "Oh... and he doesn't mind if I steal your upgrades." </magicMan>
+			</action>
+			<action>
+				<trigger> StealUpgrades </trigger>
+			</action>
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<hoptron> "I hate you." </hoptron>
+			</action>	
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		
+		<scene id="501">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>		
+						<mm_animation nextAnimation="idle_cake"> grabCake </mm_animation>
+						<magicMan> "Happy Birthday Hoptron!" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<hoptron> "...You remembered!" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Of course I did you silly goose!" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "Tee hee!" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Hee hee hee!" </magicMan>
+					</action>
+					<action>		
+						<trigger> throwCake </trigger>					
+						<magicMan> "Happy Birthday to the GROUND!" </magicMan>
+					</action>
+					<action>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+						<hoptron> *tear* </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+		
+		<scene id="3">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "Woah big man... beating all these levels already... think you're so good don't you!?" </magicMan>
+			</action>			
+			<action>
+				<magicMan> "Just the Fast-Food world to go big man! Hope it's not like ridiculously hard so that you die like 1,000 times!" </magicMan>
+			</action>
+			<action>
+				<magicMan> "Hope the game designer didn't make it like impossibly, unfairly difficult just to make you angry and make you hate your life and give up!" </magicMan>
+			</action>						
+			<action>
+				<magicMan> "That would suck wouldn't it! Ya! If like the game designer was basically telling you to give up to save yourself the frustration of a ridiculous level with crazy impossible hard bosses!" </magicMan>
+			</action>
+			<action>
+				<magicMan> "I bet the next boss has like 9 million HP, are you ready for that nonsense!?" </magicMan>
+			</action>
+			<action>
+				<magicMan> "Just give up, man. Give up and save your stupid robot bunny face. " </magicMan>
+			</action>
+			<action>
+				<hoptron> "You can't scare my player Magic Man.... Until I get back my burrito they'll never stop. " </hoptron>
+			</action>			
+			<action>
+				<magicMan> "But I can make them angry by stealing your upgrades..." </magicMan>
+			</action>
+			<action>
+				<trigger> StealUpgrades </trigger>
+			</action>
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<hoptron> "crap." </hoptron>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		
+		<scene id="301">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>																			
+			<action>
+				<stopmusic> </stopmusic>
+				<music> sadloop </music>							
+				<hoptron> "Uh oh... Why is the music all sad?" </hoptron>
+			</action>
+			<action>
+				<magicMan> "The year was 2004... " </magicMan>
+			</action>
+			<action>
+				<magicMan> "It was my 7th birthday party... " </magicMan>
+			</action>	
+			<action>
+				<magicMan> "I invited all the other magic kids to come... " </magicMan>
+			</action>
+			<action>
+				<magicMan> "But... sadly... none of them showed up..." </magicMan>
+			</action>
+			<action>
+				<magicMan> "As the last candle finally burnt out... I looked up at my mom with tears in my eyes... and asked her.... " </magicMan>
+			</action>	
+			<action>
+				<magicMan> "Why?... Why did no one come?" </magicMan>
+			</action>	
+			<action>
+				<magicMan> "She looked down at me, leaned in, and said..." </magicMan>
+			</action>	
+			<action>
+				<magicMan> "..." </magicMan>
+			</action>
+			<action>
+				<hoptron> "...?" </hoptron>
+			</action>
+			<action>
+				<magicMan> "..." </magicMan>
+			</action>
+			<action>
+				<hoptron> "...??" </hoptron>
+			</action>
+			<action continueTime="7.2">
+				<stopmusic> </stopmusic>
+				<sound> Fart2 </sound>
+				<trigger> mm_flip </trigger>						
+				<magicMan> * FFFFFFAAAAARRRRRTTTTT!!! * </magicMan>
+				<mm_animation nextAnimation="fartIdle"> startFart </mm_animation>						
+				<trigger> disableContinuePress </trigger>
+			</action>
+			<action continueTime="1">
+				<mm_animation nextAnimation="idle"> finishFart </mm_animation>
+			</action>					
+			<action>					
+				<trigger> mm_flip </trigger>	
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<magicMan> "HAHAHAHAHAHA" </magicMan>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<normalmusic> </normalmusic>
+				<trigger> UnBlurBG </trigger>				
+			</action>				
+		</scene>	
+		
+		<scene id="4">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "My god... You've done it, you've actually done it." </magicMan>
+			</action>			
+			<action>
+				<magicMan> "A dumb, stupid, idiot robot bunny like yourself actually beat all 5 levels... " </magicMan>
+			</action>
+			<action>
+				<magicMan> "and now I guess it's time to give you your burrito back." </magicMan>
+			</action>						
+			<action>
+				<magicMan> "I mean, it DID take you a long time to make it... and you died... let's see...." </magicMan>
+			</action>
+			<action>
+				<magicMan cus_var="deaths"> "$$ times." </magicMan>
+			</action>
+			<action>
+				<magicMan> "But like that's not like too terrible right? I mean one time I saw a puppy trying to catch a ball but it just fell down the stairs instead." </magicMan>
+			</action>
+			<action>
+				<magicMan> "but you know what? The mommy doggie was probably still proud of the drooling little idiot." </magicMan>
+			</action>
+			<action>
+				<magicMan cus_var="deaths"> "Because like it's the effort that counts right? Not the fact that it fell down the stairs or that you died a shameful $$ times..." </magicMan>
+			</action>
+			<action>
+				<magicMan> "You totally shouldn't be embarrassed by that. Totally." </magicMan>
+			</action>
+			<action>
+				<magicMan> "Anyway, follow me... I'll give your burrito back on the other side of this portal." </magicMan>
+			</action>
+			<action>
+				<magicMan> "It's totally not a trap, so don't worry about that." </magicMan>
+			</action>
+			<action>
+				<magicMan> "and it's totally not like my special battle zone in outer space, " </magicMan>
+			</action>			
+			<action>
+				<magicMan> "Because ha! Why would I take you there? Since my only plan is to peacefully return your Burrito." </magicMan>
+			</action>
+			<action>
+				<magicMan> "And on a completely unrelated note, I'm stealing your upgrades..." </magicMan>
+			</action>
+			<action>
+				<trigger> StealUpgrades </trigger>
+			</action>
+			<action>				
+				<magicMan> "but that has nothing to do with the coming battle! ha! woopse! What battle? There's no battle! I'm just gonna give you your burrito!" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Umm... Well... You could just give it back to me right now..." </hoptron>
+			</action>
+			<action>
+				<magicMan cus_var="deaths"> "What? Can't hear you! Did you say you are coming? Yep... see you there friend! And I won't tell anyone about the $$ deaths, I promise. " </magicMan>
+			</action>					
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		
+		<scene id="5">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<magicMan> "Oh you're here... I'll just go ahead and give your burrito back now..." </magicMan>
+			</action>			
+			<action>
+				<magicMan> "MUHAHHAA you didn't think it would be THAT EASY did you!?" </magicMan>
+			</action>
+			<action>
+				<magicMan> "...Just kidding it IS that easy. You've fought so much already, you've earned it." </magicMan>
+			</action>	
+			<action>
+				<trigger> giveBurritoSequence2 </trigger>
+			</action>
+			<action>
+				<trigger> shootBurrito02 </trigger>
+			</action>		
+			<action continueTime="2">
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<hoptron> "NOOO! BURRITO! " </hoptron>
+			</action>
+			<action>
+				<mm_animation> laugh01 </mm_animation>
+				<sound> mm_laugh01 </sound>
+				<magicMan> "BUHHAHHAHAHAHA" </magicMan>
+			</action>		
+			<action>
+				<hoptron> "YOU WERE SO DELICIOUS!!!  I CAN'T FIGHT YOU!!!!" </hoptron>
+			</action>
+			<action>
+				<hoptron> "... But I have to." </hoptron>
+			</action>			
+			<action delay="1" continueTime="0.2"> 
+				<trigger> startBurrito </trigger>
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+		<scene id="6">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>
+			<action>
+				<hoptron> * You got your burrito back! * </hoptron>
+			</action>
+			<action>
+				<hoptron> * I bet it's totally still good to eat and stuff... yeah... worth it! Right? Yeah... *  </hoptron>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> loadFinal </trigger>
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>	
+		<scene id="7">
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>		
+			<action>
+				<hoptron> "Dude! The 'deal with it' thing is MY thing! " </hoptron>
+			</action>	
+			<action>
+				<magicMan> "Well too bad! Ha! What you gonna do about it anyway?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "I'm gonna deal with it... Time to finally get my revenge. Time to deal with you! " </hoptron>
+			</action>
+			<action>
+				<magicMan> "What? Really? Can't we just end the game instead? You really want another final boss battle?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "ALL awesome games have more than 1 part to their final boss battles!!" </hoptron>
+			</action>						
+			<action>
+				<magicMan> "Well then prepare yourself... For I am the Magic Man and I have ultimate power!" </magicMan>
+			</action>		
+			<action>
+				<hoptron> "...Bro... THAT'S your best line before the final fight? 'I am the Magic Man and I have ultimate power?'" </hoptron>
+			</action>
+			<action>
+				<magicMan> "Uh well... I didn't really plan this part... Just kinda improvising it here..." </magicMan>
+			</action>
+			<action>
+				<magicMan> "Umm... how about... 'Fear me! I will destroy you!' " </magicMan>
+			</action>
+			<action>
+				<hoptron> "Weak dude..." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Crap, okay, umm... 'Behold my might and fury!!' ...?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Lame..." </hoptron>
+			</action>
+			<action>
+				<magicMan> "How about... 'Go #^&* yourself Hoptron.' ...?" </magicMan>			
+			</action>
+			<action>
+				<hoptron> "Yep, that one makes me want to fight you." </hoptron>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> startFinalBattle </trigger>
+				<trigger> UnBlurBG </trigger>
+			</action>
+		</scene>
+		<scene>
+			<action delay="1" continueTime="0.1"> 
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>			
+			<action>
+				<hoptron> " ...Hey ...You dead? " </hoptron>
+			</action>
+			<action>
+				<magicMan> "Yes." </magicMan>
+			</action>
+			<action>
+				<currentEnemy_setTalk> dead_talk </currentEnemy_setTalk>
+				<currentEnemy_setIdle> dead_talk_idle </currentEnemy_setIdle>
+				<hoptron> "Totally dead?" </hoptron>
+			</action>
+			<action>								
+				<magicMan> "Totally! Couldn't you tell by my lengthy death animation?" </magicMan>
+			</action>
+			<action>				
+				<hoptron> "That was really dramatic." </hoptron>
+			</action>
+			<action>
+				<magicMan> "I'm hoping to get an oscar nomination one of these days." </magicMan>
+			</action>
+			<action>
+				<magicMan> "Anyway... damn bro... you seriously kick butt! I give up. " </magicMan>
+			</action>
+			<action>
+				<magicMan> "So, now the moment you've been waiting for. As your reward, it's time for me to reveal the ultimate secret of the game..." </magicMan>
+			</action>
+			<action>
+				<magicMan> "Nay... the ultimate secret of the ENTIRE UNIVERSE." </magicMan>
+			</action>	
+			<action>
+				<magicMan> "MY SECRET IDENTITY!!!" </magicMan>
+			</action>	
+			<action>
+				<hoptron> "What? You have a secret identity?" </hoptron>
+			</action>						
+			<action>
+				<magicMan> "What? Ya obviously... why do you think I wore this bandana over my face the whole time?" </magicMan>
+			</action>	
+			<action>
+				<hoptron> "I seriously thought it was just because you were really ugly?" </hoptron>
+			</action>	
+			<action>
+				<magicMan> "I am not! Shut up! Comon! This is a big deal! My secret identity is really cool! You were supposed to be like questioning it the whole game and stuff." </magicMan>
+			</action>
+			<action>
+				<magicMan> "Like... 'Oh man, gosh, I’m dying to know who the magic man is... why did he do this to me, what is my life purpose?' and..." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Oh... well... I just... didn’t care." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Well this is anti-climactic then isn’t it... Fine I won’t show you." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Well since you brought it up you might as well show me." </hoptron>
+			</action>
+			<action>
+				<magicMan> "No it’s too late now. hmph!" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Aw comon, did i hurt your feelings? I’m curious now." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Really? You really wanna know now?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Sure magic man... " </hoptron>
+			</action>
+			<action>
+				<magicMan> "Say it! Say you really wanna know my secret identity!" </magicMan>
+			</action>
+			<action>
+				<hoptron> "... Fine... I really wanna know your secret identity." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Really really?" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Really." </hoptron>
+			</action>
+			<action>
+				<magicMan> "I’ll think about it." </magicMan>
+			</action>
+			<action>
+				<hoptron> "I’m just gonna stab you." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Fine, I’ll show you... but I’m warning you... I’m someone really special... like... it’s gonna change the meaning of the entire game." </magicMan>
+			</action>
+			<action>
+				<hoptron> "..." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Like I mean... once you know my identity... it might change your outlook on life... you might question everything you ever thought was true." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Uh huh? " </hoptron>
+			</action>
+			<action>
+				<magicMan> "Okay, are you ready? I’m gonna take off my bandana now." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Yep... ready.." </hoptron>
+			</action>
+			<action>
+				<magicMan> "Oh no... Now I built it up to much... it’s like when someone says a movie is amazing then you go with high expectations and then-" </magicMan>
+			</action>
+			<action>
+				<magicMan> "-even though it would have been amazing you think it was only pretty-good cause you were expecting so much." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Oh god dammit." </hoptron>
+				<currentEnemy_setTalk> dead_talk_idle </currentEnemy_setTalk>
+				<currentEnemy_setIdle> dead_talk_idle </currentEnemy_setIdle>
+			</action>
+			<action>
+				<magicMan> "Okay fine... just... just press the button... if you're sure... and I’ll show you." </magicMan>
+			</action>			
+			<action delay="1" continueTime="0.2"> 				
+				<trigger> UnBlurBG </trigger>
+			</action>
+		</scene>
+		<scene>			
+			<action delay="1" continueTime="0.1"> 				
+				<trigger> BlurBG </trigger>
+				<trigger> TweenInTalkSequence </trigger>
+			</action>		
+			<action>
+				<trigger> showDB </trigger>
+				<hoptron> "What!? Dickbutt is that you!?" </hoptron>
+			</action>			
+			<action>				
+				<currentEnemy_setTalk> talk </currentEnemy_setTalk>
+				<currentEnemy_setIdle> idle </currentEnemy_setIdle>
+				<magicMan> "Actually, due to wanting to avoid any copyright infringement, I am clearly not Dickbutt. Instead my name is DikBot! " </magicMan>
+			</action>
+			<action>
+				<hoptron> "Hurray!!!" </hoptron>
+			</action>
+			<action>
+				<magicMan> "See!? There's a banana on my butt!" </magicMan>
+			</action>
+			<action>
+				<hoptron> "Yay!!! That's not weird at all!" </hoptron>
+			</action>
+			<action>
+				<magicMan> "Now you understand why I had to steal your burrito and send you to Giant Evil nasty Food world." </magicMan>
+			</action>
+			<action>
+				<hoptron> "Of course I do! It all makes sense now! This is the best day of my life!" </hoptron>
+			</action>
+			<action>
+				<magicMan> "Let's fly over a space-rainbow together!" </magicMan>
+			</action>		
+			<action>
+				<hoptron> "Yay! DikBot is love, DikBot is life!" </hoptron>
+			</action>
+			<action>
+				<magicMan> "Yippee!" </magicMan>
+			</action>
+			<action delay="1" continueTime="0.2"> 
+				<trigger> UnBlurBG </trigger>				
+			</action>
+		</scene>
+	</MAIN_SCENES>
+	<EXTRA_SCENES>		
+						
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>			
+						<mm_animation nextAnimation="idle_tablet"> grabTablet </mm_animation>
+						<magicMan> "Hey Syri look up: 'Best ways to kill a Samurai Robot Ninja bunny.'" </magicMan>
+					</action>										
+					<action>
+						<sound> store_notEnough </sound>
+						<magicMan> *No results found for how to kill a samurai robot ninja bunny* </magicMan>
+					</action>						
+					<action>						
+						<magicMan> "DAMMIT SYRI!" </magicMan>
+					</action>						
+					<action continueTime="1">
+						<mm_animation nextAnimation="idle"> putAwayTablet </mm_animation>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Knock Knock" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "Who's there?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Boo" </magicMan>
+					</action>
+					<action>
+						<hoptron> "Boo who?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Don't cry, it's just a game!" </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+								
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Hey did you know that 15% of this games profit is being donated to the research center for misunderstood unicorns?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "Really?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "No. " </magicMan>
+					</action>									
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>	
+									
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "So like, my bandana is pretty cool right?" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "I dunno man... skulls... are kinda lame." </hoptron>
+					</action>
+					<action>
+						<magicMan> "... NO THEY ARENT! UUGHHH! I'M TELLING!" </magicMan>
+					</action>						
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene id="606">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Hey... um... So I took your advice and got a new bandana. This one's like the Chinese symbol for 'fire' cool right?" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "...Are you sure that says fire?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Ya like 87% sure." </magicMan>
+					</action>
+					<action>
+						<hoptron> "...Are you sure it doesn't say you're a 'douche'?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Bro that hurts." </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Hey Hoptron, do you like Dad Jokes?" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "Hmm... I'm not sure." </hoptron>
+					</action>						
+					<action>					
+						<magicMan> "Hi not-sure, I'm dad." </magicMan>
+					</action>							
+					<action>
+						<hoptron> "...That joke just gave me cancer." </hoptron>
+					</action>		
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "HA YOU BLINKED! I WIN!" </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>	
+					<action>
+						<hoptron> "...Crap." </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Don't you just hate it when you like, try to pull out your nose-hair but like no matter how hard you pull on it, it just won't come out, and like your eyes are watering and like-" </magicMan>
+					</action>										
+					<action>
+						<magicMan> "you don't want to just cut it with the scissors because then it's just gonna grow back in a week and you just wanna get rid of it once and for all and you're just yanking on it and crying" </magicMan>
+					</action>						
+					<action>
+						<magicMan> "then your mom's like 'what are you doing in the bathroom for so long!' and you're like 'I swear to god mom I'm just picking my nose hairs!' " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "... Dude... WTF?" </hoptron>
+					</action>		
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>				
+				
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>
+						<magicMan> "Hey, do you know how Bruce Lee died?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "Well there was a lot of controversy, but the theory that-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Wrong! The truth is... he simply became too awesome...  So awesome that his physical body couldn't possibly contain his awesomeness anymore and he had to trancend the boundaries of our physical realm to another of pure infinite awesomeness." </magicMan>
+					</action>	
+					<action>
+						<magicMan> "Ya true story, and there he became a DJ. A DJ that totally fricken rules. " </magicMan>
+					</action>	
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene id="302">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>
+						<stopmusic> </stopmusic>
+						<music> romanticloop </music>		
+						<magicMan> "Do you believe in true love?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "What the heck? Why did the music just get all romantic?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "It's just that... We've been in this game a long time together and... I..." </magicMan>
+					</action>	
+					<action>
+						<hoptron> "?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Look into my eyes and tell me you don't feel something!!" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "I...  I... I mean, it's just so soon and I..." </hoptron>
+					</action>
+					<action>
+						<stopmusic> </stopmusic>		
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+						<magicMan> "Just kidding loser! I have a girlfriend! Ha!" </magicMan>
+					</action>	
+					<action>						
+						<hoptron> *sniff* </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<normalmusic> </normalmusic>
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>						
+						<magicMan> "..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "Hi..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Who.... me!?" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "Ya... There's literally no one else here." </hoptron>
+					</action>
+					<action>
+						<magicMan> "...I have a girlfriend." </magicMan>
+					</action>						
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>						
+					</action>		
+					<action continueTime="1.5">
+						<mm_animation> idle_music_dance </mm_animation>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>
+					<action>						
+						<hoptron> "Woah, rockin out there... What are you listening to? " </hoptron> 
+					</action>
+					<action>
+						<mm_animation> idle_music </mm_animation>
+						<magicMan> "Umm... the coolest... music... in the... ever..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "...?" </hoptron>
+						<mm_animation> idle_music_dance </mm_animation>
+					</action>
+					<action>
+						<mm_animation> idle_music </mm_animation>
+						<magicMan> "They're like, this awesome... band?... who's really badass?... and like, hardcore?.. and stuff?" </magicMan>
+					</action>	
+					<action>
+						<mm_animation> idle_music_dance </mm_animation>
+						<hoptron> "Why does everything you say sound like a question?" </hoptron>
+					</action>
+					<action>
+						<mm_animation> idle_music </mm_animation>
+						<magicMan> "Because of how heavy their music is?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "You're listening to One Direction aren't you?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "...YES! They're my favorite! but, recently I've been so scared they'll break up!" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "Dude." </hoptron>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<hoptron> "Me too." </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "... *sigh* ..." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "... I'm not going to ask you why you sighed. " </hoptron>
+					</action>
+					<action>
+						<magicMan> "Well, remember I mentioned I had a girlfriend? Things just aren't going well. " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "Still didn't ask." </hoptron>
+					</action>
+					<action>
+						<magicMan> "I made her this magic cake... and like, got her these cool flowers that turn into cute puppies and stuff... but she just wasn't that into it. " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "... Don't care..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "I'm just not sure what to do... I really like her... but it's like she's not that impressed with all my magic stuff." </magicMan>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "Girls don't only need magic tricks and special gifts bro. You gotta attract her with who you are...  Be confident, be authentic, be a good leader. Look deep into her eyes, pull her close and kiss her like she's never been kissed before... Show her she's yours and that she can always depend on you... " </hoptron>
+					</action>
+					<action>
+						<magicMan> "...Wow..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "...That is..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "...The dumbest advice I have EVER heard! You idiot!" </magicMan>
+					</action>
+					<action>
+						<magicMan> "I'm just gonna suit up next time, chicks love guys in suits. and like... a little magic love potion never hurt amirite!? " </magicMan>
+					</action>
+					<action>
+						<hoptron> "...God dammit." </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "And here on this week's episode we can see the wild Hoptron 5000 in his natural habitat." </magicMan>
+					</action>					
+					<action>
+						<magicMan> "A hunter predator creature, with a thick fur coat and titanium metal plating, he carries a large samurai sword and destroys the lives of his prey, the innocent lovely food monsters." </magicMan>
+					</action>	
+					<action>
+						<magicMan> "...What a jerk." </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>									
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>
+					<action>
+						<hoptron> "Magic man! Why did you do this? Why steal my burrito and send me to Evil nasty food world!?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Woah....bro... chill out... so many questions... geeze... just like... have fun and kill some monsters will you?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "But I- " </hoptron>
+					</action>
+					<action>
+						<magicMan> "But- But! Man... like talk about getting all worked up... like do some yoga or something..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "... You know? downward dog... Flying lotus...." </magicMan>
+					</action>					
+					<action>
+						<magicMan> "Comon, breath with me... Inhale.... exhale..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "Yoga's for pussies. " </hoptron>
+					</action>					
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Hey Hoptron. You know what I like more than watching you get your butt kicked by Evil nasty Food monsters?" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "What?" </hoptron>
+					</action>	
+					<action>
+						<magicMan> "Boobs." </magicMan>
+					</action>			
+					<action>
+						<hoptron> "Ya boobs are pretty awesome." </hoptron>
+					</action>	
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Do you wanna know how I got these scars? " </magicMan>
+					</action>					
+					<action>
+						<hoptron> "What scars?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Oh uh... it's kinda embarassing... They're on my butt." </magicMan>
+					</action>	
+					<action>
+						<hoptron> "This conversation is over." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Why so serious!?" </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene id="401">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "...!" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "...!!" </hoptron>
+					</action>
+					<action>
+						<magicMan> "...!!!!!" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "...!!!!!!" </hoptron>
+					</action>
+					<action continueTime="35">
+						<sound> TheMasterFart </sound>
+						<trigger> mm_flip </trigger>						
+						<mm_animation nextAnimation="fartIdle"> startFart </mm_animation>
+						<magicMan> * FFFFFFAAAAAARRRRRRTTTTTT!!!!!! * </magicMan>
+						<trigger> disableContinuePress </trigger>
+					</action>
+					<action continueTime="1">
+						<mm_animation nextAnimation="idle"> finishFart </mm_animation>
+					</action>
+					<action>					
+						<trigger> mm_flip </trigger>	
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+						<magicMan> "HAHAHAHAHAHAHAHAHHAHAHAHAHAA I name that fart... THE MASTER FART!" </magicMan>
+					</action>
+					<action>
+						<mm_animation> idle </mm_animation>
+						<magicMan> "It was like the Master-Sword of farts." </magicMan>
+					</action>
+					<action>
+						<magicMan> "Do you have any idea how much practice a fart like that NEEDS!?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "Man I went through a lot of undies perfecting that baby..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "Consider that fart a blessing. Your life has meaning now." </magicMan>
+					</action>
+					<action>
+						<magicMan> "Later loser!" </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>								
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "So like, have you made any in-app purchases yet?" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "As usual, I don't understand or care what you are-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Well im glad you asked! *Ahem* In-app purchases are a great way to show support for the countless awful, painful, tireless, " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "... oh god, I-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "boring, torturous, horrible- " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "... please just-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "mind numbing, soul crushing, life sucking hours of game development that games like this need. " </magicMan>
+					</action>
+					<action>
+						<hoptron> "... actually you know I'm kinda hoping to go to the next level... can we-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "That's right! Games like this are REALLY hard to make, in fact this scene alone took 6 months of 18 hours a day work to program!" </magicMan>
+					</action>
+					<action>
+						<hoptron> "...that seems really inaccurate..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "In-app purchases enhance your play experience, and allow the developer to possibly eat something other than ramen noodles for the first time in years." </magicMan>
+					</action>
+					<action>
+						<hoptron> "... can we like, just move on?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "That's a great point! If we don't make any in-app purchases we are basically admitting we are terrible people... the type that would like, murder kittens for fun or something." </magicMan>
+					</action>
+					<action>
+						<hoptron> "... you're not listening to me at all are you? " </hoptron>
+					</action>
+					<action>
+						<magicMan> "You're not a kitten murdered are you? " </magicMan>
+					</action>
+					<action>
+						<hoptron> "...I seriously have no idea what you're talking about." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Kittens are people too you sicko." </magicMan>
+					</action>
+					<action>
+						<hoptron> "... I'm not-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Just say you'll do it... say you'll make an in app purchase!" </magicMan>
+					</action>
+					<action>
+						<hoptron> "... I don't even know what that means..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Oh well I can explain more-" </magicMan>
+					</action>
+					<action>
+						<hoptron> ".... no no no! it's fine I'll do it! I'll purchase all the In-Apps I swear!" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Well that's great to hear. Kittens everywhere will be relieved to hear you are a wonderful person with a great heart, and I'm sure the developer will really appreciate it. Thank you and enjoy the next level!" </magicMan>
+					</action>
+					<action>
+						<hoptron> "... you just keep getting weirder and weirder. " </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene id="201">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Gentlemen... from this day forward... you will all refer to me by the name.... Betty..." </magicMan>
+					</action>					
+					<action>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh02 </sound>
+						<magicMan> "NUEYEEHAAAYEEHAAAYEHAAA!" </magicMan>
+					</action>
+					<action>
+						<hoptron> "But isn't Betty a woman's name!?" </hoptron>
+					</action>
+					<action>
+						<mm_animation> idle </mm_animation>
+						<magicMan> *anger intensifies* </magicMan>
+					</action>
+					<action>
+						<hoptron> *anger intensifies even more intensely* </hoptron>
+					</action>
+					<action>
+						<magicMan> "Hmm... Sleepy time." </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>
+						<hoptron> "I'm here to kick ass and chew carrots," </hoptron>
+					</action>
+					<action>
+						<hoptron> "but the carrots all turned evil. " </hoptron>
+					</action>
+					<action>
+						<magicMan> "I can give you some bubblegum instead... just sayin..." </magicMan>
+					</action>						
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>				
+				
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Hey.. hey Hoptron. hey." </magicMan>
+					</action>					
+					<action>
+						<hoptron> "...What?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Can I tell you a secret?" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "...sure" </hoptron>
+					</action>
+					<action>
+						<magicMan> "You promise you won't tell anyone?" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "...ya" </hoptron>
+					</action>
+					<action>
+						<magicMan> "No seriously you promise?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "Yes." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Say it. Say I promise I won't tell anyone." </magicMan>
+					</action>
+					<action>
+						<hoptron> "... I promise... I won't tell anyone." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Ever?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "Ever." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Ok." </magicMan>
+					</action>
+					<action>
+						<magicMan> "Are you ready?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "This is a big secret..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "I'm Batman." </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>
+					<action>
+						<hoptron> "... I hate you." </hoptron>
+					</action>					
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "So what you.. what you doing later huh?" </magicMan>
+					</action>					
+					<action>
+						<magicMan> "I was just gonna hang out...but..." </magicMan>
+					</action>	
+					<action>
+						<magicMan> "Maybe we could get a pizza or, you know... scam some chicks or something right?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "Cause um, I do like the ladies you know.... I do like em, " </magicMan>
+					</action>
+					<action>
+						<magicMan> "I like-a-them and they like-a-me back. " </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "GALE BEGGY!" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "What?" </hoptron>
+					</action>						
+					<action>
+						<magicMan> "I don't know anything!" </magicMan>
+					</action>		
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Hey Hoptron... Top 10 Super Nintendo games? " </magicMan>
+					</action>
+					<action>
+						<hoptron> "I got this... Ahem. In no particular order... " </hoptron>
+					</action>
+					<action>
+						<hoptron> "Chrono Trigger, Super Mario World, Starfox, Megman X, Mario RPG" </hoptron>
+					</action>
+					<action>
+						<hoptron> "Donkey Kong Country, Yoshi's Island, Kirby Superstar, Link to the Past, Super Metroid." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Dude that's solid." </magicMan>
+					</action>									
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>	
+				<scene id="408">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>					
+						<magicMan> "Never gonna give you up! Never gonna let you down!" </magicMan>
+					</action>										
+					<action>					
+						<magicMan> "Never gonna run around and desert you!"  </magicMan>
+					</action>
+					<action>					
+						<magicMan> "Never gonna make you cry! Never gonna say goodbye!"  </magicMan>
+					</action>
+					<action>					
+						<magicMan> "Never gonna tell a lie and hurt you!"  </magicMan>
+					</action>
+					<action>
+						<hoptron> "No...! Did I just get Rick Rolled!?..." </hoptron>
+					</action>
+					<action>
+						<hoptron> "or... did the player?" </hoptron>
+						<sound> nevergonna </sound>
+					</action>
+					<action>
+						<hoptron> *Stares directly into your eyes* </hoptron>
+						<ht_animation nextAnimation="dealwithit_idle"> turnToScreen </ht_animation> 						
+					</action>
+					<action>
+						<magicMan> *Stares directly into your soul* </magicMan>
+						<mm_animation nextAnimation="turnToScreen_idle"> turnToScreen </mm_animation> 
+					</action>
+					<action continueTime="1">
+						<ht_animation nextAnimation="idle"> turnBack </ht_animation> 
+						<mm_animation nextAnimation="idle"> turnBack </mm_animation> 
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>		
+				
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>								
+						<magicMan> "What keeps you going Hoptron 5000?" </magicMan>
+					</action>										
+					<action>
+						<magicMan> "How can you die so many times, and just keep pressing on?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "How can you keep fighting through such impossible odds and hardship?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "What is it you are fighting for?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "Revenge?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "Justice?" </magicMan>
+					</action>
+					<action>
+						<magicMan> "Truth?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "No." </hoptron>
+					</action>
+					<action>
+						<hoptron> "I'm fighting for something much more important." </hoptron>
+					</action>
+					<action>
+						<hoptron> "I'm fighting for my burrito." </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>								
+						<magicMan> "Pop quiz! What's the most manly sport in the world!?" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "Umm... Rugby? Muay Thai kickboxing?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Pffft. No!.. It's Ultimate Frisbee! " </magicMan>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "... The game designer likes Ultimate Frisbee doesn't he?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Ya... he made me say that." </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>								
+						<magicMan> "Bro... you ever just wanna... put ice-cream.... inside... your ice-cream?" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "Heh. Yeah." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Yeah bro." </magicMan>
+					</action>
+					<action>
+						<hoptron> "Yeah." </hoptron>
+					</action>	
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>
+						<magicMan> "..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "... Hey so... umm.... " </magicMan>
+					</action>	
+					<action>
+						<hoptron> "?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "I... I got nothin man... I'm.... I'm just gonna go..." </magicMan>
+					</action>	
+					<action>
+						<hoptron> "Just gonna go!??? But like... the players are depending on you man. Depending on you to say something at least mildly entertaining..." </hoptron>
+					</action>
+					<action>
+						<magicMan> "But I..." </magicMan>
+					</action>
+					<action>
+						<hoptron> "They need you man! They trust you! Do you know how boring and meaningless their lives are without your charm and wit to make them smile?" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Oh god... I didn't realize... I really am the only source of joy in their stupid little lives aren't I?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "You ARE that important... Your jokes really mean everything to them." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Oh man... okay... I gotta say something funny... oh god this is awkward." </magicMan>
+					</action>
+					<action>
+						<hoptron> "You got this." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Okay... here goes... umm... Hey Hoptron... you look... fat today... and stuff. Idiot... face...?" </magicMan>
+					</action>
+					<action>
+						<hoptron> "..." </hoptron>
+					</action>
+					<action>
+						<hoptron> "Maybe you should just go-" </hoptron>
+					</action>
+					<action>
+						<magicMan> "-I'm just gonna go." </magicMan>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Hey Hoptron, want a nacho?" </magicMan>
+					</action>					
+					<action>
+						<hoptron> "Sure!" </hoptron>
+					</action>
+					<action>
+						<magicMan> "Well... I don't have any nachos. " </magicMan>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh01 </sound>
+					</action>						
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>	
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>										
+					<action>
+						<magicMan> "Man... so I was thinking about playing a different video game than this one today..." </magicMan>
+					</action>					
+					<action>
+						<magicMan> "Then I realized... Ha! I'm not a total idiot! Playing any other game would be totally dumb!" </magicMan>
+					</action>	
+					<action>
+						<hoptron> "For once we agree on something." </hoptron>
+					</action>
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene>
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>								
+						<magicMan> "Hey bro, you been workin out? Lookin good!" </magicMan>
+					</action>										
+					<action>
+						<hoptron> "Oh hehe well, actually I just bought a few upgrades." </hoptron>
+					</action>
+					<action>
+						<magicMan> "Well it really shows, keep up the good work." </magicMan>
+					</action>
+					<action>
+						<hoptron> "Thanks!" </hoptron>
+					</action>	
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene id="507">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>																			
+					<action>								
+						<magicMan> "What do you get when you cross an owl, with a bungee cord?" </magicMan>
+					</action>										
+					<action>
+						<magicMan> "My ass." </magicMan>
+					</action>
+					<action>
+						<mm_animation> laugh01 </mm_animation>
+						<sound> mm_laugh02 </sound>
+						<magicMan> "NUYEEHAAAAYEEHAHAAYEHHAAA" </magicMan>
+					</action>	
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+				<scene id="508">
+					<action delay="1" continueTime="0.1"> 
+						<trigger> BlurBG </trigger>
+						<trigger> TweenInTalkSequence </trigger>
+					</action>
+					<action>								
+						<magicMan> "Woah hold up, I feel funny... I think I'm gonna channel some shiz right now. Oh man. Here goes." </magicMan>
+					</action>
+					<action>								
+						<magicMan> "Hello. This is the game designer." </magicMan>
+					</action>
+					<action>								
+						<magicMan> "and congratulations for finding the final extra dialogue in the game." </magicMan>
+					</action>										
+					<action>
+						<magicMan> "This is a chance for me the designer to speak directly to you." </magicMan>
+					</action>
+					<action>
+						<magicMan> "A chance for me to say something really awesome and meaningful that will stick in your heart and your mind for all eternity." </magicMan>
+					</action>							
+					<action>
+						<magicMan> "something to remind you of this game, but more importantly, to make you see the world in a new way." </magicMan>
+					</action>
+					<action>
+						<magicMan> "to change your perspective on life, to help you question how you have been living and most important of all to help you become a better and happier person." </magicMan>
+					</action>
+					<action>
+						<magicMan> "As the designer I want to say 3 things." </magicMan>
+					</action>
+					<action>
+						<magicMan> "1: Thanks so much for playing, I had a blast making this game and truly put my heart into it. It's my first big game release, so hope you really enjoyed it, and that I'll be able to make more games in the future with each one getting better and better." </magicMan>
+					</action>
+					<action>
+						<magicMan> "2: Live your life like a video game. Find what you think is awesome in all areas of life and surround yourself with it. Remove anything that is not awesome. Level yourself up to overcome any challenge. This is the simplest recipe for happiness." </magicMan>
+					</action>
+					<action>
+						<magicMan> "3: and thirdly... and most important of all..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "I want to say..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "If you can just take away one thing from this game..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "If just one message can be passed into your beautiful soul from my words..." </magicMan>
+					</action>
+					<action>
+						<magicMan> "It's this:" </magicMan>
+					</action>
+					<action continueTime="5">
+						<sound> Fart4 </sound>
+						<trigger> mm_flip </trigger>						
+						<magicMan> * FFFFFFFAAAAAAAARRRRRRRRRTTTTTTT * </magicMan>
+						<mm_animation nextAnimation="fartIdle"> startFart </mm_animation>						
+						<trigger> disableContinuePress </trigger>
+					</action>
+					<action continueTime="1">
+						<mm_animation nextAnimation="idle"> finishFart </mm_animation>
+					</action>					
+					<action delay="1" continueTime="0.2"> 
+						<trigger> UnBlurBG </trigger>				
+					</action>
+				</scene>
+		
+	</EXTRA_SCENES>
+</SCENES>
