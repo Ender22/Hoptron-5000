@@ -4,13 +4,15 @@
  * buffered attack taps mid-swing via `attackPressedAgain`).
  */
 
-export type GameAction = 'left' | 'right' | 'jump' | 'attack' | 'dash' | 'throw' | 'spell1' | 'spell2' | 'pause';
+export type GameAction = 'left' | 'right' | 'down' | 'jump' | 'attack' | 'dash' | 'throw' | 'spell1' | 'spell2' | 'pause';
 
 const KEY_BINDINGS: Record<string, GameAction> = {
   ArrowLeft: 'left',
   KeyA: 'left',
   ArrowRight: 'right',
   KeyD: 'right',
+  ArrowDown: 'down',
+  KeyS: 'down',
   Space: 'jump',
   KeyW: 'jump',
   ArrowUp: 'jump',
@@ -34,11 +36,12 @@ const PAD_BUTTONS: Partial<Record<number, GameAction>> = {
   4: 'spell1', // LB
   5: 'spell2', // RB
   9: 'pause', // Start
-  14: 'left', // d-pad
+  13: 'down', // d-pad
+  14: 'left',
   15: 'right',
 };
 
-const ACTIONS: GameAction[] = ['left', 'right', 'jump', 'attack', 'dash', 'throw', 'spell1', 'spell2', 'pause'];
+const ACTIONS: GameAction[] = ['left', 'right', 'down', 'jump', 'attack', 'dash', 'throw', 'spell1', 'spell2', 'pause'];
 const STICK_DEADZONE = 0.35;
 
 export class Input {
@@ -96,6 +99,7 @@ export class Input {
     if (Math.abs(stickY) < STICK_DEADZONE) stickY = 0;
     if (stickX < 0) padDown.add('left');
     if (stickX > 0) padDown.add('right');
+    if (stickY > 0.5) padDown.add('down');
 
     // gamepad edge detection
     for (const action of padDown) {

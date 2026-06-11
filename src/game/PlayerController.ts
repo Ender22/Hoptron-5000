@@ -65,7 +65,11 @@ const AIR_ATTACK_MAX_FALL = 2.5;
 /** after this fraction of a stage, jump can cancel the recovery (dash cancels anytime) */
 const CANCEL_WINDOW = 0.55;
 
-type State = 'ground' | 'air' | 'dash' | 'attack';
+/** plunge (fall attack): reverse-played Attack_FromGtoA + fast fall, AoE on land */
+const PLUNGE_FALL_ACCEL = GRAVITY * 2.2;
+const PLUNGE_MAX_FALL = 17;
+
+type State = 'ground' | 'air' | 'dash' | 'attack' | 'plunge';
 
 export class PlayerController {
   x = 400;
@@ -122,6 +126,8 @@ export class PlayerController {
 
   /** fired when a ninja star should spawn (x, y, dir) */
   onThrow: ((x: number, y: number, dir: number) => void) | null = null;
+  /** fired when a plunge attack hits the ground (AoE + shockwave in Game) */
+  onPlungeLand: ((x: number, y: number) => void) | null = null;
 
   constructor(spriter: SpriterPlayer, input: Input) {
     this.spriter = spriter;
@@ -152,6 +158,7 @@ export class PlayerController {
   /** apply damage; returns false if it was dodged/ignored */
   hurt(amount: number, knockDir: number): boolean {
     if (this.godMode || this.invincible || this.iframeTimer > 0 || this.potionInvinceTimer > 0 || this.dead) return false;
+    this.spriter.reverse = false; // an interrupted plunge must not stick its reverse flag
     // dodge shoes: auto-dodge roll (original: invincible + dodge anim + slide away)
     if (this.dodgeChance > 0 && Math.random() * 100 < this.dodgeChance) {
       this.iframeTimer = 1.5;
@@ -253,6 +260,9 @@ export class PlayerController {
       case 'attack':
         this.updateAttack(dt);
         break;
+      case 'plunge':
+        this.xVel *= 0.85; // x damps hard — it's a committed drop
+        break;
       default:
         this.updateMove(dt);
     }
@@ -309,10 +319,14 @@ export class PlayerController {
       return;
     }
 
-    // attack
+    // attack — or plunge when holding down in the air (the phase-2 fall attack)
     if (this.input.buffered('attack', 0.1)) {
       this.input.consumeBuffer('attack');
-      this.startCombo();
+      if (!this.onGround && this.input.isDown('down')) {
+        this.startPlunge();
+      } else {
+        this.startCombo();
+      }
       return;
     }
 
@@ -371,6 +385,18 @@ export class PlayerController {
       this.state = this.onGround ? 'ground' : 'air';
       if (this.onGround) this.spriter.playAnim(this.input.axisX !== 0 ? 'Run' : 'idle');
     }
+  }
+
+  // ---- plunge (fall attack) ----
+  private startPlunge(): void {
+    this.state = 'plunge';
+    this.xVel *= 0.4;
+    if (this.yVel < 2) this.yVel = 2;
+    // no authored downward attack — Attack_FromGtoA played in REVERSE is the move
+    this.spriter.reverse = true;
+    this.spriter.playbackSpeed = 1.25;
+    this.spriter.playAnim('Attack_FromGtoA', '', null, true);
+    audio.playRandom(SWING_SOUNDS[2], 0.02);
   }
 
   // ---- attack combo ----
@@ -454,6 +480,9 @@ export class PlayerController {
         // float during air attacks so combos can stay airborne
         this.yVel += GRAVITY * AIR_ATTACK_GRAVITY_FACTOR;
         if (this.yVel > AIR_ATTACK_MAX_FALL) this.yVel = AIR_ATTACK_MAX_FALL;
+      } else if (this.state === 'plunge') {
+        this.yVel += PLUNGE_FALL_ACCEL;
+        if (this.yVel > PLUNGE_MAX_FALL) this.yVel = PLUNGE_MAX_FALL;
       } else {
         this.yVel += GRAVITY;
       }
@@ -466,7 +495,13 @@ export class PlayerController {
       if (!this.onGround) {
         this.onGround = true;
         this.jumpsUsed = 0;
-        if (this.state === 'air') {
+        if (this.state === 'plunge') {
+          this.state = 'ground';
+          this.spriter.reverse = false;
+          this.spriter.playbackSpeed = 1;
+          this.spriter.playAnim('land', 'idle', null, true);
+          this.onPlungeLand?.(this.x, this.y);
+        } else if (this.state === 'air') {
           this.state = 'ground';
           if (this.input.axisX !== 0) {
             this.spriter.playAnim('Run');

@@ -12,6 +12,7 @@ import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelDat
 import { Balloons } from './Balloons';
 import { Boss } from './Boss';
 import { createBoss } from './BossBehaviors';
+import { ComboMeter } from './ComboMeter';
 import { DebugPanel } from './DebugPanel';
 import { Enemy, type EnemyServices } from './Enemy';
 import { EnemyProjectiles } from './EnemyProjectiles';
@@ -19,6 +20,8 @@ import { Input } from './Input';
 import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
 import { MetaShop } from './MetaShop';
 import { NinjaStars } from './NinjaStars';
+import { PauseMenu } from './PauseMenu';
+import { PexSystem } from './PexParticles';
 import { Pickups } from './Pickups';
 import { GROUND_Y, PlayerController } from './PlayerController';
 import { loadSave, writeSave } from './SaveData';
@@ -139,6 +142,15 @@ export async function startGame(root: HTMLElement): Promise<void> {
   lootLayer.addChild(pickups);
   const stars = new NinjaStars(effectsAtlas);
   effectsLayer.addChild(stars);
+  // original .pex particle defs (code bursts remain the fallback)
+  const pex = new PexSystem();
+  effectsLayer.addChild(pex);
+  void pex.load([
+    'explosion_yellow', 'explosion_red', 'explosion_orange', 'explosion_brown',
+    'explosion_purple', 'explosion_pink', 'explosion_green', 'explosion_blue',
+    'die_sundae', 'die_hamburger', 'die_durian', 'die_watermelon', 'die_salmon',
+    'die_eggplant', 'fromGround', 'coke_blast', 'blast',
+  ]);
   const bossShots = new BossShots();
   effectsLayer.addChild(bossShots);
   const enemyShots = new EnemyProjectiles();
@@ -250,17 +262,58 @@ export async function startGame(root: HTMLElement): Promise<void> {
     audio.play('swipe1_02', 0, 0.4);
     stars.throw_(x, y, dir);
   };
+
+  // plunge attack: AoE + shockwave on landing
+  const shockwaves: { g: Graphics; x: number; age: number }[] = [];
+  player.onPlungeLand = (x, y) => {
+    audio.play('slam', 0, 0.8);
+    shake.add(8);
+    hitstop.freeze(0.05);
+    if (pex.has('fromGround')) pex.burst('fromGround', x, y - 6, 1.2);
+    const g = new Graphics();
+    effectsLayer.addChild(g);
+    shockwaves.push({ g, x, age: 0 });
+    for (const enemy of wave?.enemies ?? []) {
+      if (!enemy.alive || enemy.invincible) continue;
+      if (Math.abs(enemy.x - x) < 130 && Math.abs(enemy.y - y) < 120) {
+        damageEnemy(enemy, player.swordDamage * 1.5 * player.damageMultiplier, Math.sign(enemy.x - x) || 1);
+      }
+    }
+  };
+
+  function updateShockwaves(dt: number): void {
+    for (let i = shockwaves.length - 1; i >= 0; i--) {
+      const s = shockwaves[i];
+      s.age += dt;
+      if (s.age > 0.35) {
+        s.g.destroy();
+        shockwaves.splice(i, 1);
+        continue;
+      }
+      const t = s.age / 0.35;
+      s.g.clear();
+      s.g.ellipse(s.x, GROUND_Y - 4, 30 + 130 * t, 10 + 26 * t).stroke({ color: 0xcfe2ff, width: 5 * (1 - t), alpha: 1 - t });
+    }
+  }
   stars.onHit = (enemy, killed) => {
     audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
     if (killed) onEnemyKilled(enemy);
   };
 
+  /** pex def when we have one, code burst otherwise */
+  function doBurst(x: number, y: number, name: string, count: number): void {
+    if (pex.has(name)) pex.burst(name, x, y, count / 16);
+    else bursts.burst(x, y, name, count);
+  }
+
   function onEnemyKilled(enemy: Enemy): void {
     wave?.onKill();
     runKills++;
-    score += enemy.type.pointsAward;
-    apFloat += enemy.type.pointsAward / 300;
-    bursts.burst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
+    comboMeter.onKill();
+    const points = Math.round(enemy.type.pointsAward * comboMeter.multiplier);
+    score += points;
+    apFloat += points / 300;
+    doBurst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
     pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
     if (enemy instanceof Boss) {
       bossesThisLevel++;
@@ -332,7 +385,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         hitstop.freeze(0.05);
       }
     },
-    burst: (x, y, deathPS, count) => bursts.burst(x, y, deathPS, count),
+    burst: (x, y, deathPS, count) => doBurst(x, y, deathPS, count),
     killEnemy: (enemy) => damageEnemy(enemy, 9999999, 1),
     pullPlayer: (x, _y, accel) => {
       if (player.dead || player.hasIFrames) return;
@@ -652,6 +705,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     disposeShopkeeper();
     balloons.clearActive();
     scoreScreen.visible = false;
+    pex.clear();
 
     let cached = sconCache.get(def.scon);
     if (!cached) {
@@ -675,6 +729,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
     levelText.alpha = 1;
+    countdownTimer = 2.4; // 3-2-1 before the waves start
+    comboMeter.reset();
     debugPanel.refreshEnemyList();
   }
 
@@ -694,14 +750,15 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   function combatTick(): void {
     if (!wave) return;
-    const stage = player.state === 'attack' ? player.comboStageIndex : -1;
+    // plunge counts as pseudo-stage 9 so it gets its own once-per-swing hit set
+    const stage = player.state === 'attack' ? player.comboStageIndex : player.state === 'plunge' ? 9 : -1;
     if (stage !== lastComboStage) {
       lastComboStage = stage;
       if (stage >= 0) hitThisSwing.clear();
     }
 
     const sword = bunnySpriter.getPart(SWORD_PART);
-    if (sword && player.state === 'attack') {
+    if (sword && stage >= 0) {
       tipLocal.x = SWORD_TIP_LOCAL_X * player.swordLengthFactor; // Sword Booster reach
       const hilt = effectsLayer.toLocal(sword.toGlobal(hiltLocal));
       const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
@@ -748,6 +805,36 @@ export async function startGame(root: HTMLElement): Promise<void> {
   // ---- HUD ----
   const hud = new Container();
   app.stage.addChild(hud);
+
+  const comboMeter = new ComboMeter();
+  hud.addChild(comboMeter);
+  let prevPlayerHp = player.hp;
+
+  // 3-2-1 countdown at level start (original countDown textures)
+  const countdownSprite = new Sprite();
+  countdownSprite.anchor.set(0.5);
+  countdownSprite.position.set(STAGE_W / 2, 200);
+  countdownSprite.visible = false;
+  hud.addChild(countdownSprite);
+  let countdownTimer = 0;
+  const countdownTextures: Texture[] = [];
+  void Promise.all(
+    ['three', 'two', 'one'].map((n) => Assets.load<Texture>(`assets/textures/countDown/${n}.png`)),
+  ).then((t) => countdownTextures.push(...t));
+
+  function updateCountdown(): void {
+    if (countdownTimer <= 0) {
+      countdownSprite.visible = false;
+      return;
+    }
+    countdownTimer -= FIXED_DT;
+    const slot = countdownTimer > 1.6 ? 0 : countdownTimer > 0.8 ? 1 : 2;
+    const slotT = (countdownTimer - (2 - slot) * 0.8) / 0.8; // 1 → 0 within the slot
+    countdownSprite.texture = countdownTextures[slot] ?? Texture.EMPTY;
+    countdownSprite.visible = countdownTextures.length > 0;
+    countdownSprite.scale.set(0.62 - 0.18 * slotT); // the source PNGs are huge
+    countdownSprite.alpha = Math.min(1, slotT * 5);
+  }
 
   const hpBack = new Graphics().roundRect(10, 10, 154, 16, 4).fill({ color: 0x000000, alpha: 0.55 });
   const hpBar = new Graphics();
@@ -996,9 +1083,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
   };
   audio.playMusic('menu_title', 1.5);
 
+  // ---- pause menu ----
+  const pauseMenu = new PauseMenu(save);
+  pauseMenu.onRestart = () => restart();
+  pauseMenu.onQuit = () => gotoTitle();
+  audio.musicMuted = save.musicMuted;
+  audio.sfxMuted = save.sfxMuted;
+
   // ---- AP meta-shop overlay (S on the title screen) ----
   const metaShop = new MetaShop(save, storeAtlas, effectsAtlas);
-  app.stage.addChild(scoreScreen, metaShop);
+  app.stage.addChild(scoreScreen, pauseMenu, metaShop);
   metaShop.onChanged = () => {
     title.locked = metaShop.visible;
     title.refresh(save);
@@ -1046,7 +1140,18 @@ export async function startGame(root: HTMLElement): Promise<void> {
         continue;
       }
 
+      if (pauseMenu.visible) {
+        pauseMenu.pollInput(input);
+        input.postUpdate();
+        continue;
+      }
+
       if (player.dead && input.justPressed('pause')) restart();
+      else if (!player.dead && !gameComplete && input.justPressed('pause')) {
+        pauseMenu.open();
+        input.postUpdate();
+        continue;
+      }
       if (input.justPressed('spell1')) spells.cast(0);
       if (input.justPressed('spell2')) spells.cast(1);
 
@@ -1056,11 +1161,14 @@ export async function startGame(root: HTMLElement): Promise<void> {
       }
 
       player.update(FIXED_DT);
+      if (player.hp < prevPlayerHp) comboMeter.reset(); // taking a hit breaks the streak
+      prevPlayerHp = player.hp;
+      updateCountdown();
       if (shopkeeper) {
         shopkeeper.update(FIXED_DT, player);
         if (shopkeeper.state === 'gone') disposeShopkeeper();
       }
-      if (wave) {
+      if (wave && countdownTimer <= 0) {
         wave.update(FIXED_DT * enemyTimeScale, player);
         if (wave.needsBoss !== null) void spawnBoss(wave.needsBoss);
         if (wave.needsChest !== null) {
@@ -1086,8 +1194,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
       pickups.update(FIXED_DT, player.x, player.y);
       balloons.update(FIXED_DT, player.x, player.y, !player.dead);
       updateChest();
+      updateShockwaves(FIXED_DT);
+      comboMeter.update(FIXED_DT);
       swipeTrail.update(FIXED_DT);
       bursts.update(FIXED_DT);
+      pex.update(FIXED_DT);
       shake.update(FIXED_DT);
       spells.update(FIXED_DT);
       if (screenFlash.alpha > 0) screenFlash.alpha = Math.max(0, screenFlash.alpha - FIXED_DT * 1.6);

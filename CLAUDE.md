@@ -115,14 +115,14 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] Post-level score screen (`ScoreScreen.ts`): kills/score/+AP count-ups, NEW RECORD + new_record sound, jump to continue (world paused). AP accrual: loot/7 + points/300, +10%/boss, banked per level AND on death/quit via bankProgress.
 - [x] AP meta-shop (`MetaShop.ts`, S on title): fight tab w/ original formulas+prices (HP 50+40L, sword dmg 30+16L / star 10+5L, sword reach 240+20L via tipLocal scale, slash chain-window 0.65−0.05L) and all 8 spells unlock/level 1-4 (−12% cooldown per level, original magic prices; time/akuma priced in-family). Spells gated on title (locked = dimmed X, legacy loadouts sanitized in loadSave). SaveData: ap/fight/spells/bestKills (+musicMuted/sfxMuted fields reserved for Phase E pause menu).
 
-### Phase E — Game feel & polish
+### Phase E — Game feel & polish — DONE except user tuning pass
 
-- [ ] Fall attack (user's phase-2 feature): audition reverse `Attack_FromGtoA` in viewer; plunge = hold down + attack in air, x-damp, fast fall, AoE on land + shockwave.
-- [ ] .pex particle player (34 original defs in assets/particles: per-enemy die_*, portal, explosions) replacing/augmenting code bursts; map enemy `deathPS` names to .pex.
-- [ ] Combo meter + score multiplier (original comboBar/COMBO_FILLER), kill streak feel.
-- [ ] Pause menu (Esc/Start when alive): resume/restart/title, music+sfx mute toggles persisted to save.
-- [ ] Level title banners, 3-2-1 countdown (textures exist in assets/textures/countDown), loading tips (Loading.xml).
-- [ ] Tuning pass with user: 30-apple opening swarm cap?, spell cooldowns, trail color verdict, dash trail VFX, hit sparks on enemy contact.
+- [x] Fall attack: hold DOWN (new input action: ArrowDown/KeyS/d-pad/stick) + attack in air → plunge state (reverse `Attack_FromGtoA` @1.25x, x-damp 0.85, fall accel 2.2×g cap 17, committed move); landing = AoE 130×120 @1.5× sword dmg via kill pipeline, shockwave ring + fromGround.pex + slam + shake/hitstop. `onPlungeLand` callback; plunge = pseudo combo stage 9 so the sword also hits on the way down. Reverse flag cleared on hurt/land.
+- [x] .pex particle player (`PexParticles.ts`): parses Particle Designer XML (speed/angle/life/size/color lerp/gravity/additive blend from blendFuncDestination), one-shot bursts w/ original particle_*.png textures; all 14 deathPS defs + fromGround/coke_blast/blast loaded; `doBurst()` falls back to code bursts for unknown names. Continuous emitters (portal/flame) NOT built — fine for now.
+- [x] Combo meter (`ComboMeter.ts`, adaptation): kill streak w/ 3s rolling window + drain bar, tiers 6/12/20 kills → ×1.5/×2/×3 score multiplier (applies to score AND AP points), breaks on taking damage, pop-scale text top-right.
+- [x] Pause menu (`PauseMenu.ts`): Esc/Start while alive → resume/restart/quit-to-title + music/sfx mute toggles persisted to save (audio.musicMuted/sfxMuted; applied at boot). World freezes; ←→ navigate, J/jump confirm.
+- [x] 3-2-1 countdown at level start (countDown textures, scale-pop+fade, ~0.62 scale — source PNGs are huge); wave updates gated until done. Level text banner kept. Loading tips SKIPPED (loads are instant in dev; revisit at Phase G if the prod bundle is slow).
+- [ ] Tuning pass with user (NEEDS DEVIN): 30-apple opening swarm cap?, spell cooldowns, trail color verdict, dash trail VFX, hit sparks on enemy contact, plunge feel (damage/radius/fall speed), combo tier thresholds, countdown size/feel, shop prices vs coin income.
 
 ### Phase F — Story & meta content
 

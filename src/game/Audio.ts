@@ -15,6 +15,25 @@ class AudioManager {
   sfxVolume = 0.9;
   musicVolume = 0.45;
   muted = false;
+  private _sfxMuted = false;
+  private _musicMuted = false;
+
+  get sfxMuted(): boolean {
+    return this._sfxMuted;
+  }
+
+  set sfxMuted(value: boolean) {
+    this._sfxMuted = value;
+  }
+
+  get musicMuted(): boolean {
+    return this._musicMuted;
+  }
+
+  set musicMuted(value: boolean) {
+    this._musicMuted = value;
+    this.music?.volume(value ? 0 : this.musicVolume);
+  }
 
   /** preload a list of fx names (no extension), matching MGC.loadLotsOfSounds */
   loadFx(names: string[]): void {
@@ -25,7 +44,7 @@ class AudioManager {
   }
 
   play(name: string, delaySec = 0, volume = 1): void {
-    if (this.muted) return;
+    if (this.muted || this._sfxMuted) return;
     const howl = this.sfx.get(name);
     if (!howl) {
       console.warn(`[audio] sfx not loaded: ${name}`);
@@ -45,7 +64,7 @@ class AudioManager {
   /** start a looping fx (Blaster flame etc.); returns a stop function */
   playLoop(name: string, volume = 1): () => void {
     const howl = this.sfx.get(name);
-    if (!howl || this.muted) return () => {};
+    if (!howl || this.muted || this._sfxMuted) return () => {};
     const id = howl.play();
     howl.loop(true, id);
     howl.volume(this.sfxVolume * volume, id);
@@ -59,7 +78,7 @@ class AudioManager {
     const howl = new Howl({ src: [`${MUSIC_PATH}${name}.mp3`], loop: true, volume: 0 });
     this.music = howl;
     howl.play();
-    howl.fade(0, this.muted ? 0 : this.musicVolume, fadeInSec * 1000);
+    howl.fade(0, this.muted || this._musicMuted ? 0 : this.musicVolume, fadeInSec * 1000);
   }
 
   stopMusic(fadeOutSec = 1): void {
