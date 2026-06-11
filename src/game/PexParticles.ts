@@ -39,6 +39,8 @@ interface Particle {
 }
 
 const PARTICLE_DIR = 'assets/particles/';
+/** .pex defs were authored in 2x retina coordinates (-hd era) — halve for our 1x stage */
+const PEX_SCALE = 0.5;
 // .pex texture refs are mostly the generic "texture.png" — pick sensible defaults
 const TEXTURE_FOR: Record<string, string> = {
   'texture.png': 'particle_circle.png',
@@ -125,9 +127,9 @@ export class PexSystem extends Container {
 
     for (let i = 0; i < count; i++) {
       const angle = ((cfg.angle + (Math.random() - 0.5) * 2 * cfg.angleVariance) * Math.PI) / 180;
-      const speed = cfg.speed + (Math.random() - 0.5) * 2 * cfg.speedVariance;
+      const speed = (cfg.speed + (Math.random() - 0.5) * 2 * cfg.speedVariance) * PEX_SCALE;
       const life = Math.max(0.15, cfg.life + (Math.random() - 0.5) * 2 * cfg.lifeVariance);
-      const startSize = Math.max(2, cfg.startSize + (Math.random() - 0.5) * 2 * cfg.startSizeVariance);
+      const startSize = Math.max(2, (cfg.startSize + (Math.random() - 0.5) * 2 * cfg.startSizeVariance) * PEX_SCALE);
 
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5);
@@ -143,7 +145,7 @@ export class PexSystem extends Container {
         age: 0,
         life,
         startScale: startSize / texture.width,
-        endScale: Math.max(1, cfg.finishSize) / texture.width,
+        endScale: Math.max(1, cfg.finishSize * PEX_SCALE) / texture.width,
         cfg,
       });
     }
@@ -158,8 +160,8 @@ export class PexSystem extends Container {
         this.active.splice(i, 1);
         continue;
       }
-      p.vx += p.cfg.gravityX * dt;
-      p.vy += p.cfg.gravityY * dt;
+      p.vx += p.cfg.gravityX * PEX_SCALE * dt;
+      p.vy += p.cfg.gravityY * PEX_SCALE * dt;
       p.sprite.x += p.vx * dt;
       p.sprite.y += p.vy * dt;
 

@@ -64,6 +64,10 @@ export class Enemy {
   /** fired when a koMode enemy gets knocked out */
   onKO: (() => void) | null = null;
 
+  /** sword/star hit capsule: radius around the vertical body line from y (feet) to y - hitHeight */
+  hitRadius = 42;
+  hitHeight = 70;
+
   /** bosses keep acting while hurt and don't get knocked back (original behavior) */
   protected isBoss = false;
   /** disable gravity per-instance (flying archetypes) */

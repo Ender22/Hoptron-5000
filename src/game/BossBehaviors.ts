@@ -1014,23 +1014,34 @@ export class AttachedMinion extends Enemy {
   offX = 0;
   offY = 0;
   onDestroyed: (() => void) | null = null;
+  /** lit candles flicker a flame burst so they read as targets */
+  flame = false;
+  private flameTimer = 0;
 
-  attachTo(parent: Enemy, offX: number, offY: number): void {
+  attachTo(parent: Enemy, offX: number, offY: number, scale = 0): void {
     this.parentBoss = parent;
     this.offX = offX;
     this.offY = offY;
+    if (scale > 0) this.baseScale = scale;
     this.flying = true;
     this.canDamage = false;
     this.play('idle');
   }
 
-  protected runAI(_dt: number, _player: PlayerView): void {
+  protected runAI(dt: number, _player: PlayerView): void {
     if (!this.parentBoss) return;
     const facing = Math.sign(this.parentBoss.spriter.scale.x) || 1;
     this.x = this.parentBoss.x + this.offX * facing;
     this.y = this.parentBoss.y + this.offY;
     this.xVel = 0;
     this.yVel = 0;
+    if (this.flame) {
+      this.flameTimer -= dt;
+      if (this.flameTimer <= 0) {
+        this.flameTimer = 0.22;
+        this.services?.burst(this.x, this.y - 40, 'flame', 3);
+      }
+    }
   }
 
   protected onDeath(): void {
@@ -1272,11 +1283,14 @@ class CakeBoss extends Boss {
     const offsets: [number, number][] = [[-70, -150], [-42, -170], [-14, -180], [14, -180], [42, -170], [70, -150]];
     this.candles = [];
     this.candlesRemaining = 0;
-    offsets.forEach(([ox, oy], i) => {
+    // NOTE: the rig's authored points all resolve to one spot, so the six
+    // candles stacked into what looked like a single candle (playtest) —
+    // use the hand-tuned tier offsets instead of pointPos.
+    offsets.forEach(([ox, oy]) => {
       const c = this.services?.spawnChild('candle', this.x + ox, this.y + oy, 0, 0);
       if (c instanceof AttachedMinion) {
-        const p = this.pointPos(i);
-        c.attachTo(this, p ? (p.x - this.x) * (this.faceOverride ?? 1) : ox, p ? p.y - this.y : oy);
+        c.attachTo(this, ox, oy, 0.85); // bigger + lit, or they read as decoration
+        c.flame = true;
         c.onDestroyed = () => this.candleOut(c);
         this.candles.push(c);
         this.candlesRemaining++;
@@ -1298,7 +1312,8 @@ class CakeBoss extends Boss {
       if (!this.alive || this.stunned) return;
       const c = this.services?.spawnChild('candle', this.x + offX, this.y + offY, 0, 0);
       if (c instanceof AttachedMinion) {
-        c.attachTo(this, offX, offY);
+        c.attachTo(this, offX, offY, 0.85);
+        c.flame = true;
         c.onDestroyed = () => this.candleOut(c);
         this.candlesRemaining++;
       }

@@ -27,10 +27,14 @@ export const WALL_RIGHT = 760;
 const FRICTION = 0.8;
 const BUNNY_SCALE = 0.375;
 
-// ---- v1 retune (original values in comments) ----
-const GRAVITY = 0.68; // 0.8 — felt too heavy in playtest
-const JUMP_VELOCITY = -12; // -11
-const DOUBLE_JUMP_VELOCITY = -10.5; // (no double jump in original)
+// ---- v2 retune (playtest 2026-06-11: jumps too low/floaty-wrong; original values in comments) ----
+// asymmetric gravity: rise slower than you fall (standard action-platformer feel,
+// ~0.42s rise / ~0.34s fall, max single-jump height ~175px ≈ 2x bunny height)
+const GRAVITY = 0.6; // rising (orig 0.8 symmetric)
+const FALL_GRAVITY = 0.85;
+const MAX_FALL_SPEED = 14;
+const JUMP_VELOCITY = -14.5; // -11
+const DOUBLE_JUMP_VELOCITY = -12.5; // (no double jump in original)
 const JUMP_CUT_FACTOR = 0.45; // releasing jump while rising cuts velocity (variable jump height)
 const ACCELERATION = 1.3; // 0.7 — snappier starts
 const MAX_MOVE_SPEED = 10.5; // 10
@@ -232,6 +236,10 @@ export class PlayerController {
   /** fixed 60Hz tick; dt is always 1/60 but passed for the spriter clock */
   update(dt: number): void {
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+    if (this.dashGrace > 0 && this.state !== 'dash') {
+      this.dashGrace -= dt;
+      if (this.dashGrace <= 0) this.invincible = false;
+    }
 
     // invincibility potion: golden pulse (original boosted brightness/saturation)
     if (this.potionInvinceTimer > 0) {
@@ -380,10 +388,13 @@ export class PlayerController {
     this.spriter.playAnim('dash_forward', this.onGround ? 'idle' : 'idle_air', null, true);
   }
 
+  /** short post-dash invulnerability so dashing through attacks feels reliable */
+  private dashGrace = 0;
+
   private updateDash(dt: number): void {
     this.dashTimer -= dt;
     if (this.dashTimer <= 0) {
-      this.invincible = false;
+      this.dashGrace = 0.14;
       this.xVel *= 0.5;
       this.state = this.onGround ? 'ground' : 'air';
       if (this.onGround) this.spriter.playAnim(this.input.axisX !== 0 ? 'Run' : 'idle');
@@ -487,7 +498,8 @@ export class PlayerController {
         this.yVel += PLUNGE_FALL_ACCEL;
         if (this.yVel > PLUNGE_MAX_FALL) this.yVel = PLUNGE_MAX_FALL;
       } else {
-        this.yVel += GRAVITY;
+        this.yVel += this.yVel < 0 ? GRAVITY : FALL_GRAVITY;
+        if (this.yVel > MAX_FALL_SPEED) this.yVel = MAX_FALL_SPEED;
       }
     }
 

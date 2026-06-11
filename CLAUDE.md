@@ -56,7 +56,8 @@ constants 334–392 · initAllTheThings 1771 · initLevelGraphics 1858 (level→
 
 ## Critical technical facts (hard-won — do not rediscover)
 
-- **Spriter runtime semantics (must match, data authored against them)**: y NEGATED at parse; file names `.png`-stripped; sprite pivot defaults (0,1); Pixi `anchor = (pivot_x, 1 - pivot_y)`; `rotation = deg2rad(360 - angle)`; spin-aware angle lerp; instant/linear/quadratic/cubic curves; mainline INSTANT skips interpolation; bone chain via `unmapFromParent` (incl. negative-scale angle flip).
+- **Spriter runtime semantics (must match, data authored against them)**: y NEGATED at parse; file names `.png`-stripped; sprite pivot defaults (0,1); Pixi `anchor = (pivot_x, 1 - pivot_y)`; `rotation = deg2rad(360 - angle)`; spin-aware angle lerp; instant/linear/quadratic/cubic curves; mainline INSTANT skips interpolation; bone chain via `unmapFromParent` (incl. negative-scale angle flip). **Sprite cache MUST key by TIMELINE name, not file name** — rigs reuse one texture for two parts (Magic Man's two eyes both use MM_EyeBlack.png; file-keying rendered ONE eye), and a timeline can swap files mid-anim (blinks) so the texture is refreshed per frame.
+- **.pex configs are authored in 2x retina coordinates** (sourcePosition 300,300, speeds ~600) — halve size/speed/gravity for the 1x stage (PEX_SCALE in PexParticles.ts).
 - SCON numbers can be strings — coerce everything. `looping:false` only when present.
 - **Sword tracking**: `Bunny_Sword1` part, 153×17, pivot at hilt (right-center). Hilt = local (0,0), tip = local (−153, 0). Same `getPart` technique works for ANY part (e.g. watermelon's gun for muzzle position — see bugs).
 - Bunny has NO point/box timelines (no authored markers) and NO downward attack anim (fall-attack = reverse `Attack_FromGtoA`, viewer has reverse toggle).
@@ -70,7 +71,7 @@ constants 334–392 · initAllTheThings 1771 · initLevelGraphics 1858 (level→
 
 ## Feel tuning (user-approved current values)
 
-In `PlayerController.ts`, originals in comments: gravity 0.68 (orig 0.8), jump −12, jump-cut ×0.45 on release, accel 1.3 (0.7), combo playback speeds 1.35/1.4/1.85/1.4 with chainTime = orig/speed, impulses 4.5/4/2.5/3.5 (orig 8/7/4/6 — user said too pushy), air-attack gravity ×0.3 + fall cap 2.5 (user wants air combos), dash 19 for 0.16s cd 0.32 w/ i-frames, coyote 0.08, buffers ~0.12–0.3. Dash cancels attacks anytime; jump cancels after 55% of stage. Trail: neon blue glow 0x2f5cff core 0xcfe2ff, brightness ∝ tip speed. Hitstop 0.05–0.06, shake 2.5–12.
+In `PlayerController.ts`, originals in comments: v2 jump retune (playtest round 1) — gravity 0.6 rising / 0.85 falling (cap 14), jump −14.5, double jump −12.5, jump-cut ×0.45 on release, accel 1.3 (0.7), combo playback speeds 1.35/1.4/1.85/1.4 with chainTime = orig/speed, impulses 4.5/4/2.5/3.5 (orig 8/7/4/6 — user said too pushy), air-attack gravity ×0.3 + fall cap 2.5 (user wants air combos), dash 19 for 0.16s cd 0.32 w/ i-frames, coyote 0.08, buffers ~0.12–0.3. Dash cancels attacks anytime; jump cancels after 55% of stage. Trail: neon blue glow 0x2f5cff core 0xcfe2ff, brightness ∝ tip speed. Hitstop 0.05–0.06, shake 2.5–12.
 
 ## Status: WORKS end-to-end
 
@@ -122,7 +123,8 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] Combo meter (`ComboMeter.ts`, adaptation): kill streak w/ 3s rolling window + drain bar, tiers 6/12/20 kills → ×1.5/×2/×3 score multiplier (applies to score AND AP points), breaks on taking damage, pop-scale text top-right.
 - [x] Pause menu (`PauseMenu.ts`): Esc/Start while alive → resume/restart/quit-to-title + music/sfx mute toggles persisted to save (audio.musicMuted/sfxMuted; applied at boot). World freezes; ←→ navigate, J/jump confirm.
 - [x] 3-2-1 countdown at level start (countDown textures, scale-pop+fade, ~0.62 scale — source PNGs are huge); wave updates gated until done. Level text banner kept. Loading tips SKIPPED (loads are instant in dev; revisit at Phase G if the prod bundle is slow).
-- [ ] Tuning pass with user (NEEDS DEVIN): 30-apple opening swarm cap?, spell cooldowns, trail color verdict, dash trail VFX, hit sparks on enemy contact, plunge feel (damage/radius/fall speed), combo tier thresholds, countdown size/feel, shop prices vs coin income.
+- [x] Tuning pass round 1 (Devin playtest 2026-06-11): **resolution fix** — render at devicePixelRatio w/ autoDensity (was 1x CSS-upscaled = everything blurry; fixes shop icons, fonts, Q/E HUD); **boss hit capsules** (hitRadius/hitHeight on Enemy, 75/150 for bosses; sword samples 3 points, stars use it too — pumpkin was whiffing on the old single-point r42 check); **jump retune v2** (asymmetric gravity 0.6 rise / 0.85 fall cap 14, jump −14.5 / double −12.5 → ~175/318px heights); **dash i-frame grace** +0.14s after dash; mook speed ×0.75 / accel ×0.85 (Boss_* aiTypes exempt); Shooter intervals 2.2/2.8 (orig 1.5/2.0) + slower projectiles; Spinner spawns clamped on-screen; side spawns −20/820; **level length cuts** per world pair (fruit ×0.5, veg ×0.6, dessert ×0.7, asian/ffood ×0.8 on kill quotas + maxEnemies, applied as copies in loadLevel); post-boss chest segment capped 6s (10s read as a hang); leftover enemies now LIVE into the next segment (the mass-explosion confusion was clearStragglers — removed); **pex ×0.5** (configs authored in 2x retina coords).
+- [ ] Tuning pass round 2 with Devin: verify the above in his hands; combo tier thresholds, spell cooldowns, trail color verdict, dash trail VFX, hit sparks.
 
 ### Phase F — Story & meta content (spec mined → `notes/phase-f-spec.md` — read it first)
 

@@ -183,9 +183,9 @@ export class WaveManager {
       }
     }
 
-    // advance conditions
+    // advance conditions — leftovers LIVE into the next segment (playtest:
+    // the old mass-despawn looked like "all enemies suddenly explode")
     if (seg.continueAfterKills > 0 && this.killsThisSegment >= seg.continueAfterKills) {
-      this.clearStragglers();
       this.nextSegment();
     } else if (seg.continueAfterTime > 0 && this.segmentTimer >= seg.continueAfterTime) {
       this.nextSegment();
@@ -196,16 +196,6 @@ export class WaveManager {
   onKill(): void {
     this.killsThisSegment++;
     this.totalKills++;
-  }
-
-  private clearStragglers(): void {
-    // segment cleared — despawn leftovers gently (they got their kill quota)
-    for (const e of this.enemies) {
-      if (e.alive) {
-        e.invincible = false;
-        e.hurt(99999, e.x < 400 ? -1 : 1);
-      }
-    }
   }
 
   private spawnOne(seg: Segment): void {
@@ -282,7 +272,8 @@ export class WaveManager {
   }
 
   private spawnPosition(spawnType: string): [number, number] {
-    const side = Math.random() < 0.5 ? -40 : 840;
+    // playtest: -40/840 left slow archetypes invisible too long
+    const side = Math.random() < 0.5 ? -20 : 820;
     switch (spawnType) {
       case 'fly_from_side':
         return [side, GROUND_Y - 100 - Math.random() * 150];

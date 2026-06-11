@@ -55,7 +55,11 @@ export class NinjaStars extends Container {
       if (!dead) {
         for (const enemy of enemies) {
           if (!enemy.alive || enemy.invincible) continue;
-          if (Math.abs(enemy.x - star.sprite.x) < 35 && Math.abs(enemy.y - 35 - star.sprite.y) < 45) {
+          if (
+            Math.abs(enemy.x - star.sprite.x) < Math.max(35, enemy.hitRadius * 0.9) &&
+            star.sprite.y > enemy.y - enemy.hitHeight - 20 &&
+            star.sprite.y < enemy.y + 12
+          ) {
             const before = enemy.alive;
             enemy.hurt(this.damage, Math.sign(star.vx));
             this.onHit?.(enemy, before && !enemy.alive);

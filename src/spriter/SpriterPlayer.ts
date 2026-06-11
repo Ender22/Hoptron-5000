@@ -205,7 +205,7 @@ export class SpriterPlayer extends Container {
       const obj = frame.objects[k];
 
       if (obj.objectType === ObjectType.Sprite && obj.file) {
-        const sprite = this.getSprite(obj.file.name, obj.file.shortName);
+        const sprite = this.getSprite(obj.timelineName, obj.file.name, obj.file.shortName);
         if (!sprite) continue;
 
         if (!obj.useDefaultPivot) {
@@ -255,24 +255,32 @@ export class SpriterPlayer extends Container {
 
   private currentColor = 0xffffff;
 
-  private getSprite(name: string, shortName: string): Sprite | null {
-    let sprite = this.spritesByName.get(name) ?? null;
-    if (sprite) return sprite;
-
-    const texture = this.textures.get(name) ?? this.textures.get(shortName);
+  /**
+   * Sprites are cached by TIMELINE name, not file name — two parts can share
+   * one texture file (e.g. the Magic Man's two eyes both use MM_EyeBlack.png;
+   * keying by file collapsed them into a single rendered eye). A timeline can
+   * also swap files mid-animation (blinks), so the texture is refreshed.
+   */
+  private getSprite(timelineName: string, fileName: string, shortName: string): Sprite | null {
+    const texture = this.textures.get(fileName) ?? this.textures.get(shortName);
     if (!texture) {
-      if (!this.missingTextures.has(name)) {
-        this.missingTextures.add(name);
-        console.warn(`SpriterPlayer "${this.label}": missing texture ${name} (${shortName})`);
+      if (!this.missingTextures.has(fileName)) {
+        this.missingTextures.add(fileName);
+        console.warn(`SpriterPlayer "${this.label}": missing texture ${fileName} (${shortName})`);
       }
       return null;
     }
 
-    sprite = new Sprite(texture);
-    sprite.label = name;
-    sprite.tint = this.currentColor;
-    this.spritesByName.set(name, sprite);
-    this.addChild(sprite);
+    let sprite = this.spritesByName.get(timelineName) ?? null;
+    if (!sprite) {
+      sprite = new Sprite(texture);
+      sprite.label = timelineName;
+      sprite.tint = this.currentColor;
+      this.spritesByName.set(timelineName, sprite);
+      this.addChild(sprite);
+    } else if (sprite.texture !== texture) {
+      sprite.texture = texture;
+    }
     return sprite;
   }
 

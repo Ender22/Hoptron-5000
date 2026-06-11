@@ -40,7 +40,6 @@ const FIXED_DT = 1 / 60;
 
 const SWORD_PART = 'Bunny_Sword1';
 const SWORD_TIP_LOCAL_X = -153; // blade extends from the hilt pivot (0,0) to local (-153, 0)
-const ENEMY_HIT_RADIUS = 42; // approximate enemy body radius at 0.55 scale
 const STARTING_STARS = 30; // one original "Ninja Star Pack"
 
 // ---- in-run shop tables (GameShop.xml + InGameShopManager effects) ----
@@ -91,7 +90,16 @@ const BOSS_ID_NAMES: Record<number, string> = { 2: 'burrito', 3: 'magicman' };
 export async function startGame(root: HTMLElement): Promise<void> {
   root.innerHTML = '';
   const app = new Application();
-  await app.init({ width: STAGE_W, height: STAGE_H, background: 0x000000, antialias: true });
+  // render at device pixel ratio — at plain 1x the CSS upscale blurs every
+  // sprite and text (playtest: "everything is blurry")
+  await app.init({
+    width: STAGE_W,
+    height: STAGE_H,
+    background: 0x000000,
+    antialias: true,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    autoDensity: true,
+  });
   root.appendChild(app.canvas);
 
   const fit = () => {
@@ -153,7 +161,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'explosion_yellow', 'explosion_red', 'explosion_orange', 'explosion_brown',
     'explosion_purple', 'explosion_pink', 'explosion_green', 'explosion_blue',
     'die_sundae', 'die_hamburger', 'die_durian', 'die_watermelon', 'die_salmon',
-    'die_eggplant', 'fromGround', 'coke_blast', 'blast',
+    'die_eggplant', 'fromGround', 'coke_blast', 'blast', 'flame', 'fuse',
   ]);
   const bossShots = new BossShots();
   effectsLayer.addChild(bossShots);
@@ -721,6 +729,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     world.filters = blurred ? [new BlurFilter({ strength: 4 })] : [];
   };
   let sceneShown = false;
+  /** debug-triggered scene: don't roll into the score screen afterwards */
+  let sceneDebug = false;
 
   /** original initSceneManager: first clear = story scene, repeats = extra scenes */
   function pickScene(): SceneDef | null {
@@ -740,7 +750,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
   // ---- post-level score screen + AP banking ----
   const scoreScreen = new ScoreScreen();
   let scoreScreenPending = false;
-  dialogue.onFinished = () => showScoreScreen();
+  dialogue.onFinished = () => {
+    if (sceneDebug) {
+      sceneDebug = false;
+      return;
+    }
+    showScoreScreen();
+  };
 
   function showScoreScreen(): void {
     scoreScreenPending = true;
@@ -821,7 +837,18 @@ export async function startGame(root: HTMLElement): Promise<void> {
     // waves (level 12's data has a trailing magicman wave)
     const segs = segmentLevels[n];
     const bossIdx = segs.findIndex((s) => s.boss !== null);
-    const useSegs = bossIdx >= 0 ? segs.filter((s, i) => i <= bossIdx || s.enemies.length === 0) : segs;
+    const kept = bossIdx >= 0 ? segs.filter((s, i) => i <= bossIdx || s.enemies.length === 0) : segs;
+    // playtest 2026-06-11: levels too long — cut kill quotas per food world
+    // (fruit −50%, veg −40%, dessert −30%, asian/ffood −20%, final/mm untouched)
+    const lengthFactor = [0.5, 0.6, 0.7, 0.8, 0.8, 1, 1][Math.min(Math.floor(n / 2), 6)];
+    const useSegs = kept.map((s) => ({
+      ...s,
+      continueAfterKills: s.continueAfterKills > 0 ? Math.max(1, Math.round(s.continueAfterKills * lengthFactor)) : 0,
+      maxEnemies: s.maxEnemies > 0 ? Math.max(2, Math.round(s.maxEnemies * Math.min(1, lengthFactor + 0.2))) : s.maxEnemies,
+      minEnemies: Math.min(s.minEnemies, Math.max(1, Math.round(s.maxEnemies * Math.min(1, lengthFactor + 0.2)))),
+      // the 10s post-boss chest pause read as a hang in playtest
+      continueAfterTime: s.rewardChest !== null && s.continueAfterTime > 6 ? 6 : s.continueAfterTime,
+    }));
     wave = new WaveManager(useSegs, typesByCategory.get(def.category)!, cached.data, cached.textures, enemyLayer, enemyServices);
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
@@ -866,7 +893,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
       for (const enemy of wave.enemies) {
         if (!enemy.alive || enemy.invincible || hitThisSwing.has(enemy)) continue;
-        if (distToSegment(enemy.x, enemy.y - 35, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
+        // vertical body capsule sampled at feet/middle/top (bosses are tall)
+        const samples = [enemy.y - 20, enemy.y - enemy.hitHeight / 2 - 10, enemy.y - enemy.hitHeight];
+        if (samples.some((sy) => distToSegment(enemy.x, sy, hilt.x, hilt.y, tip.x, tip.y) < enemy.hitRadius)) {
           hitThisSwing.add(enemy);
           const wasAlive = enemy.alive;
           if (enemy instanceof Boss) bossSwordUsed = true;
@@ -1114,6 +1143,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
     },
     triggerChest: () => startChest(Math.min(10, levelIndex)),
     triggerShopkeeper: () => void spawnShopkeeper(),
+    playScene: () => {
+      if (atTitle || dialogue.active) return;
+      sceneDebug = true;
+      const scene = sceneScript.main[Math.min(levelIndex, sceneScript.main.length - 1)];
+      if (scene) void dialogue.play(scene, save.deaths);
+    },
+    resetSave: () => {
+      localStorage.removeItem('hoptron5001-save');
+      location.reload();
+    },
     fullHeal: () => {
       player.hp = player.maxHp;
     },
@@ -1140,10 +1179,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
   function drawHitboxes(): void {
     hitboxGfx.clear();
     if (!showHitboxes || !wave) return;
-    // enemy body radii (sword-hit circles) + contact boxes
+    // enemy hit capsules (sword/star detection)
     for (const e of wave.enemies) {
       if (!e.alive) continue;
-      hitboxGfx.circle(e.x, e.y - 35, ENEMY_HIT_RADIUS).stroke({ color: 0xff5555, width: 1.5 });
+      hitboxGfx.circle(e.x, e.y - 20, e.hitRadius).stroke({ color: 0xff5555, width: 1.5 });
+      hitboxGfx.circle(e.x, e.y - e.hitHeight, e.hitRadius).stroke({ color: 0xff5555, width: 1.5 });
     }
     // player contact box (combatTick: |dx|<48, |dy|<60 around y-40)
     hitboxGfx.rect(player.x - 48, player.y - 40 - 60, 96, 120).stroke({ color: 0x4dff6a, width: 1.5 });
@@ -1169,6 +1209,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
   (window as any).__chest = () => startChest(Math.min(10, levelIndex));
   (window as any).__player = player;
   (window as any).__balloons = balloons;
+  (window as any).__wave = () => wave;
+  (window as any).__scene = (i?: number) => {
+    sceneDebug = true;
+    const scene = sceneScript.main[i ?? Math.min(levelIndex, sceneScript.main.length - 1)];
+    if (scene) void dialogue.play(scene, save.deaths);
+  };
+  (window as any).__resetSave = () => {
+    localStorage.removeItem('hoptron5001-save');
+    location.reload();
+  };
   (window as any).__balloonNow = (kind: 'health' | 'invince' = 'health', level = 2) => {
     balloons.enable(kind, level);
     (balloons as any).timers[kind] = 0.1;

@@ -325,11 +325,12 @@ class Shooter extends Enemy {
   spawnAt(x: number, y: number): void {
     super.spawnAt(x, y);
     this.canMove = this.type.difficulty > 2;
+    // playtest: original fire rates were brutal with keyboard movement — slowed
     if (this.canMove) {
-      this.shootTimer = 0.65;
+      this.shootTimer = 1.2; // orig 0.65
       this.play('idle');
     } else {
-      this.shootTimer = 0.45;
+      this.shootTimer = 1.0; // orig 0.45
       this.canDamage = false;
       this.invincible = true;
       if (this.spriter.hasAnim('appear')) {
@@ -363,7 +364,7 @@ class Shooter extends Enemy {
 
     this.shootTimer -= dt;
     if (this.shootTimer <= 0 && !this.invincible) {
-      this.shootTimer = this.canMove ? 1.5 : 2.0;
+      this.shootTimer = this.canMove ? 2.2 : 2.8; // orig 1.5 / 2.0
       this.spriter.playAnim('shoot', 'idle', null, true);
       this.fireDelay = this.canMove ? 0.1 : 0.6;
     }
@@ -378,13 +379,13 @@ class Shooter extends Enemy {
     if (this.canMove) {
       // horizontal tumbling shot
       const dir = Math.sign(this.spriter.scale.x) || 1;
-      this.services.shoot(this.projectileDef, sx, sy, 5 * dir, 0, { rotSpeed: 0.2 * dir });
+      this.services.shoot(this.projectileDef, sx, sy, 4.2 * dir, 0, { rotSpeed: 0.2 * dir }); // orig 5
     } else {
-      // aimed at the bunny, speed 8 (original normalized vector)
+      // aimed at the bunny (original speed 8, softened in playtest)
       const dx = player.x - sx;
       const dy = player.y - 30 - sy;
       const len = Math.max(1, Math.hypot(dx, dy));
-      this.services.shoot(this.projectileDef, sx, sy, (dx / len) * 8, (dy / len) * 8, {
+      this.services.shoot(this.projectileDef, sx, sy, (dx / len) * 6.5, (dy / len) * 6.5, {
         rotation: Math.atan2(dy, dx) + Math.PI / 2,
       });
     }
@@ -680,7 +681,8 @@ class Spinner extends Enemy {
   private waitTimer = 1.5;
 
   spawnAt(x: number, y: number): void {
-    super.spawnAt(x, y);
+    // winds up in place — pull it on screen so the player sees it coming
+    super.spawnAt(Math.max(60, Math.min(740, x)), y);
     this.canDamage = false;
     this.play('idle');
   }

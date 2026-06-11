@@ -97,7 +97,16 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
   const xml = new DOMParser().parseFromString(await (await fetch(url)).text(), 'application/xml');
   const levels: LevelEnemies[] = [];
 
-  function parseType(e: Element): EnemyType {
+  // playtest 2026-06-11: regular enemies too fast / chaotic — global soften
+  // (bosses keep their authored speeds; their behaviors were tuned separately)
+  const MOOK_SPEED_SCALE = 0.75;
+  const MOOK_ACCEL_SCALE = 0.85;
+
+  function parseType(e: Element, isBoss = false): EnemyType {
+    // burrito/magicman are <enemyType> entries with Boss_* aiTypes — keep authored speed
+    const bossLike = isBoss || text(e, 'aiType').startsWith('Boss_');
+    const speedScale = bossLike ? 1 : MOOK_SPEED_SCALE;
+    const accelScale = bossLike ? 1 : MOOK_ACCEL_SCALE;
     return {
       id: num(e, 'id'),
       name: text(e, 'name'),
@@ -105,8 +114,8 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
       atlas: text(e, 'atlas'),
       hp: num(e, 'hp', 10),
       attackDmg: num(e, 'attackDmg', 5),
-      acceleration: num(e, 'acceleration', 0.5),
-      maxMovementSpeed: num(e, 'maxMovementSpeed', 2),
+      acceleration: num(e, 'acceleration', 0.5) * accelScale,
+      maxMovementSpeed: num(e, 'maxMovementSpeed', 2) * speedScale,
       effectedByGravity: num(e, 'effectedByGravity', 1) === 1,
       deathPS: text(e, 'deathPS'),
       spawnType: text(e, 'spawnType'),
@@ -148,7 +157,7 @@ export async function loadEnemyTypes(url = 'data/AdventureModeEnemies.xml'): Pro
       types.set(type.name, type);
     }
     const bosses = Array.from(levelEl.querySelectorAll(':scope > boss'))
-      .map(parseType)
+      .map((b) => parseType(b, true))
       .sort((a, b) => a.id - b.id);
     const projectiles = new Map<number, ProjectileType>();
     for (const p of Array.from(levelEl.querySelectorAll(':scope > projectileType'))) {

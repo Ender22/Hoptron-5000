@@ -15,6 +15,8 @@ export interface DebugHooks {
   giveAp(amount: number): void;
   triggerChest(): void;
   triggerShopkeeper(): void;
+  playScene(): void;
+  resetSave(): void;
   fullHeal(): void;
   toggleGod(): boolean;
   killAll(): void;
@@ -141,6 +143,15 @@ export class DebugPanel {
         this.button('+1000 AP', () => this.hooks.giveAp(1000)),
         this.button('chest', () => this.hooks.triggerChest()),
         this.button('shop', () => this.hooks.triggerShopkeeper()),
+      ),
+    );
+    this.el.appendChild(
+      this.row(
+        this.label('story'),
+        this.button('play scene', () => this.hooks.playScene()),
+        this.button('reset save', () => {
+          if (confirm('Wipe the save (AP, unlocks, achievements, scene progress)?')) this.hooks.resetSave();
+        }),
       ),
     );
 

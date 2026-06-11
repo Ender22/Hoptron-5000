@@ -64,6 +64,10 @@ export class Boss extends Enemy {
   constructor(type: EnemyType, spriter: SpriterPlayer) {
     super(type, spriter);
     this.isBoss = true;
+    // bosses are far bigger than the 42px mook circle (playtest: pumpkin
+    // swings whiffed half the time) — tall, wide hit capsule instead
+    this.hitRadius = 75;
+    this.hitHeight = 150;
     if (spriter.hasAnim('shoot1') || spriter.hasAnim('shoot2')) this.patterns.push('shoot');
     if (spriter.hasAnim('jump')) this.patterns.push('jump');
     if (spriter.hasAnim('attack1') || spriter.hasAnim('attack')) this.patterns.push('melee');
