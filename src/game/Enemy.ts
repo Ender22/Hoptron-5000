@@ -22,7 +22,8 @@ export interface PlayerView {
 
 /** level-side capabilities injected by the WaveManager */
 export interface EnemyServices {
-  shoot(def: ProjectileType, x: number, y: number, vx: number, vy: number, opts?: ProjectileOpts): void;
+  /** returns false if the shot could not spawn (missing texture) so callers can fall back */
+  shoot(def: ProjectileType, x: number, y: number, vx: number, vy: number, opts?: ProjectileOpts): boolean;
   /** spawn another enemy type (Icecream scoops, Stick balls, Spawner nuggets) */
   spawnChild(name: string, x: number, y: number, xVel: number, yVel: number): Enemy | null;
   shake(amount: number): void;
@@ -61,12 +62,17 @@ export class Enemy {
   suicided = false;
   /** Combo-boss KO system: at 0 HP the enemy is knocked out, not killed */
   koMode = false;
+  /** set when a koMode enemy has been knocked out (Combo reform tracking) */
+  koDone = false;
   /** fired when a koMode enemy gets knocked out */
   onKO: (() => void) | null = null;
 
   /** sword/star hit capsule: radius around the vertical body line from y (feet) to y - hitHeight */
   hitRadius = 42;
   hitHeight = 70;
+  /** wave segment this enemy spawned in — only same-segment kills count toward
+   * the quota (carry-overs were cascading segments and gutting level length) */
+  waveSegment = -1;
 
   /** bosses keep acting while hurt and don't get knocked back (original behavior) */
   protected isBoss = false;
@@ -111,6 +117,11 @@ export class Enemy {
     if (this.spriter.hasAnim(anim) && this.spriter.currentAnimationName !== anim) {
       this.spriter.playAnim(anim);
     }
+  }
+
+  /** external render-scale control (Sushi orb scale-in tween; applyTransform owns spriter.scale) */
+  setBaseScale(scale: number): void {
+    this.baseScale = scale;
   }
 
   /** spriter-local muzzle point (original spriter.activePoints[0]), scaled to stage units */
@@ -158,6 +169,7 @@ export class Enemy {
   protected die(): void {
     if (this.koMode && this.spriter.hasAnim('ko')) {
       // knocked out instead of dying (original KoEnemy flag)
+      this.koDone = true;
       this.hp = 1;
       this.invincible = true;
       this.canDamage = false;

@@ -1,7 +1,9 @@
 /**
- * Title screen - level select (capped at furthest unlocked) and the
- * pick-2 spell loadout, all keyboard/gamepad driven.
- * Layout: <- -> level · 1-4 toggle spells · Enter/Space/jump to start.
+ * Title flow, two screens (playtest: the old single screen drew a text logo
+ * on top of the original title art = "two title screens stacked"):
+ *  1. splash — the original MainTitleBG art (it contains the logo), PRESS ENTER
+ *  2. setup  — level select + pick-2 spell loadout + start
+ * All keyboard/gamepad driven; S opens the AP shop from either screen.
  */
 import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { TextureMap } from '../assets/starlingAtlas';
@@ -20,12 +22,17 @@ export class TitleScreen extends Container {
   selectedLevel = 0;
   loadout: string[];
 
+  private mode: 'splash' | 'setup' = 'splash';
   private save: SaveData;
   private levelCount: number;
+  private splashUI!: Container;
+  private setupUI!: Container;
+  private pressStart!: Text;
   private levelLabel!: Text;
   private spellIcons: { sprite: Sprite; ring: Graphics; id: string }[] = [];
   private statsLabel!: Text;
   private keyHandler: (e: KeyboardEvent) => void;
+  private pulse = 0;
 
   constructor(save: SaveData, levelCount: number, effectsAtlas: TextureMap) {
     super();
@@ -37,12 +44,17 @@ export class TitleScreen extends Container {
 
     this.keyHandler = (e) => {
       if (!this.visible || this.locked) return;
+      if (this.mode === 'splash') {
+        if (e.code === 'Enter' || e.code === 'Space') this.showSetup();
+        return;
+      }
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.changeLevel(-1);
       if (e.code === 'ArrowRight' || e.code === 'KeyD') this.changeLevel(1);
       if (/^Digit[1-8]$/.test(e.code)) {
         this.toggleSpell(SPELL_ORDER[Number(e.code.slice(5)) - 1]);
       }
       if (e.code === 'Enter' || e.code === 'Space') this.start();
+      if (e.code === 'Escape') this.showSplash();
     };
     window.addEventListener('keydown', this.keyHandler);
   }
@@ -50,6 +62,12 @@ export class TitleScreen extends Container {
   /** poll gamepad nav each frame while visible */
   pollInput(input: Input): void {
     if (!this.visible || this.locked) return;
+    this.pulse += 1 / 60;
+    this.pressStart.alpha = 0.55 + 0.45 * Math.sin(this.pulse * 4);
+    if (this.mode === 'splash') {
+      if (input.justPressed('jump') || input.justPressed('pause') || input.justPressed('attack')) this.showSetup();
+      return;
+    }
     if (input.justPressed('left')) this.changeLevel(-1);
     if (input.justPressed('right')) this.changeLevel(1);
     if (input.justPressed('jump') || input.justPressed('pause')) this.start();
@@ -61,73 +79,120 @@ export class TitleScreen extends Container {
     this.updateLabels();
   }
 
-  private build(atlas: TextureMap): void {
-    const dim = new Graphics().rect(0, 0, 800, 480).fill({ color: 0x0d0d20, alpha: 0.88 });
-    this.addChild(dim);
+  /** back to the splash art (used when returning from a run) */
+  showSplash(): void {
+    this.mode = 'splash';
+    this.splashUI.visible = true;
+    this.setupUI.visible = false;
+  }
 
+  private showSetup(): void {
+    this.mode = 'setup';
+    this.splashUI.visible = false;
+    this.setupUI.visible = true;
+    this.updateLabels();
+  }
+
+  private build(atlas: TextureMap): void {
+    // original title art at full strength — it IS the title screen
     void Assets.load<Texture>('assets/textures/titleMenu/MainTitleBG.jpg').then((tex) => {
       const bg = new Sprite(tex);
       bg.width = 800;
       bg.height = 480;
-      bg.alpha = 0.45;
       this.addChildAt(bg, 0);
     });
 
-    const title = new Text({
-      text: 'HOPTRON 5001',
-      style: { fontFamily: 'Verdana', fontSize: 52, fill: 0xffe066, fontWeight: 'bold', stroke: { color: 0x000000, width: 6 } },
-    });
-    title.anchor.set(0.5);
-    title.position.set(400, 110);
-    this.addChild(title);
+    // ---- splash ----
+    this.splashUI = new Container();
+    this.addChild(this.splashUI);
 
-    const subtitle = new Text({
-      text: 'a samurai robot bunny remake',
-      style: { fontFamily: 'Verdana', fontSize: 14, fill: 0xcccccc },
+    const remake = new Text({
+      text: 'the 5001 remake',
+      style: { fontFamily: 'Verdana', fontSize: 14, fill: 0xffffff, stroke: { color: 0x000000, width: 4 } },
     });
-    subtitle.anchor.set(0.5);
-    subtitle.position.set(400, 150);
-    this.addChild(subtitle);
+    remake.anchor.set(0.5);
+    remake.position.set(400, 300);
+    this.splashUI.addChild(remake);
+
+    this.pressStart = new Text({
+      text: 'PRESS ENTER',
+      style: { fontFamily: 'Verdana', fontSize: 26, fill: 0xffe066, fontWeight: 'bold', stroke: { color: 0x000000, width: 5 } },
+    });
+    this.pressStart.anchor.set(0.5);
+    this.pressStart.position.set(400, 360);
+    this.splashUI.addChild(this.pressStart);
+
+    const splashHint = new Text({
+      text: 'S: AP shop',
+      style: { fontFamily: 'Verdana', fontSize: 12, fill: 0xdddddd, stroke: { color: 0x000000, width: 3 } },
+    });
+    splashHint.anchor.set(0.5);
+    splashHint.position.set(400, 400);
+    this.splashUI.addChild(splashHint);
+
+    // ---- setup (level + loadout) ----
+    this.setupUI = new Container();
+    this.setupUI.visible = false;
+    this.addChild(this.setupUI);
+
+    const dim = new Graphics().rect(0, 0, 800, 480).fill({ color: 0x0d0d20, alpha: 0.88 });
+    this.setupUI.addChild(dim);
+
+    const header = new Text({
+      text: 'CHOOSE YOUR HUNT',
+      style: { fontFamily: 'Verdana', fontSize: 30, fill: 0xffe066, fontWeight: 'bold', stroke: { color: 0x000000, width: 5 } },
+    });
+    header.anchor.set(0.5);
+    header.position.set(400, 80);
+    this.setupUI.addChild(header);
 
     this.levelLabel = new Text({
       text: '',
       style: { fontFamily: 'Verdana', fontSize: 22, fill: 0xffffff, fontWeight: 'bold' },
     });
     this.levelLabel.anchor.set(0.5);
-    this.levelLabel.position.set(400, 220);
-    this.addChild(this.levelLabel);
+    this.levelLabel.position.set(400, 150);
+    this.setupUI.addChild(this.levelLabel);
 
     const spellHint = new Text({
       text: 'spells (press 1-8 to pick two):',
       style: { fontFamily: 'Verdana', fontSize: 12, fill: 0xaaaaaa },
     });
     spellHint.anchor.set(0.5);
-    spellHint.position.set(400, 270);
-    this.addChild(spellHint);
+    spellHint.position.set(400, 215);
+    this.setupUI.addChild(spellHint);
 
     SPELL_ORDER.forEach((id, i) => {
       const def = SPELLS[id];
       const x = 400 + (i - (SPELL_ORDER.length - 1) / 2) * 80;
       const ring = new Graphics();
-      ring.position.set(x, 320);
+      ring.position.set(x, 270);
       const sprite = new Sprite(atlas.get(def.icon));
       sprite.anchor.set(0.5);
       sprite.scale.set(0.85);
-      sprite.position.set(x, 320);
+      sprite.position.set(x, 270);
       const num = new Text({ text: String(i + 1), style: { fontFamily: 'Verdana', fontSize: 11, fill: 0xffffff } });
       num.anchor.set(0.5);
-      num.position.set(x, 360);
-      this.addChild(ring, sprite, num);
+      num.position.set(x, 312);
+      this.setupUI.addChild(ring, sprite, num);
       this.spellIcons.push({ sprite, ring, id });
     });
 
     const startHint = new Text({
-      text: 'ENTER / SPACE / (A) to start  ·  S: AP shop  ·  move ←→  jump SPACE  attack J  dash K  throw L  spells Q/E',
-      style: { fontFamily: 'Verdana', fontSize: 12, fill: 0xdddddd },
+      text: 'ENTER / SPACE / (A) start  ·  ←→ level  ·  S: AP shop  ·  ESC back',
+      style: { fontFamily: 'Verdana', fontSize: 13, fill: 0xdddddd },
     });
     startHint.anchor.set(0.5);
-    startHint.position.set(400, 410);
-    this.addChild(startHint);
+    startHint.position.set(400, 370);
+    this.setupUI.addChild(startHint);
+
+    const controlsHint = new Text({
+      text: 'in game: move ←→ · jump SPACE · attack J · dash K · throw L · plunge ↓+J in air · spells Q/E · pause ESC',
+      style: { fontFamily: 'Verdana', fontSize: 11, fill: 0x999999 },
+    });
+    controlsHint.anchor.set(0.5);
+    controlsHint.position.set(400, 400);
+    this.setupUI.addChild(controlsHint);
 
     this.statsLabel = new Text({
       text: '',
@@ -135,7 +200,7 @@ export class TitleScreen extends Container {
     });
     this.statsLabel.anchor.set(0.5);
     this.statsLabel.position.set(400, 440);
-    this.addChild(this.statsLabel);
+    this.setupUI.addChild(this.statsLabel);
 
     this.updateLabels();
   }

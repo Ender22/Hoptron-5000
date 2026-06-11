@@ -357,7 +357,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
   }
 
   function onEnemyKilled(enemy: Enemy): void {
-    wave?.onKill();
+    wave?.onKill(enemy);
     runKills++;
     comboMeter.onKill();
     const points = Math.round(enemy.type.pointsAward * comboMeter.multiplier);
@@ -480,6 +480,21 @@ export async function startGame(root: HTMLElement): Promise<void> {
     if (!player.dead && player.hurt(damage, player.facing * -1)) {
       shake.add(5);
     }
+  };
+  // reflected (slashed-back) shots hurt enemies; an invincible boss takes the
+  // hit as a blocked hit, which is the Sundae/Burrito stun trigger
+  enemyShots.enemyHitTest = (x, y, damage) => {
+    for (const e of wave?.enemies ?? []) {
+      if (!e.alive) continue;
+      if (Math.abs(e.x - x) < e.hitRadius && y > e.y - e.hitHeight - 20 && y < e.y + 12) {
+        const wasAlive = e.alive;
+        e.hurt(damage, Math.sign(e.x - x) || 1);
+        bursts.burst(x, y, 'explosion_white', 6);
+        if (wasAlive && !e.alive) onEnemyKilled(e);
+        return true;
+      }
+    }
+    return false;
   };
 
   async function spawnBoss(bossId: number): Promise<void> {
@@ -750,6 +765,25 @@ export async function startGame(root: HTMLElement): Promise<void> {
   // ---- post-level score screen + AP banking ----
   const scoreScreen = new ScoreScreen();
   let scoreScreenPending = false;
+  let deathTallyTimer = 0;
+  let tallyWasDeath = false;
+
+  /** run ended in death — show the tally with retry controls (original gotoScoreScreen) */
+  function showDeathTally(): void {
+    tallyWasDeath = true;
+    const newBest = score > 0 && score > save.bestScore;
+    const apEarned = bankAp();
+    bankProgress(false);
+    scoreScreen.show({
+      levelNumber: levelIndex + 1,
+      kills: runKills,
+      score,
+      apEarned,
+      newBestScore: newBest,
+      finalLevel: false,
+      death: true,
+    });
+  }
   dialogue.onFinished = () => {
     if (sceneDebug) {
       sceneDebug = false;
@@ -779,6 +813,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   scoreScreen.onContinue = () => {
     scoreScreenPending = false;
+    if (tallyWasDeath) {
+      tallyWasDeath = false;
+      restart();
+      return;
+    }
     if (levelIndex + 1 < LEVELS.length) {
       levelIndex++;
       player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
@@ -890,6 +929,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
       const hilt = effectsLayer.toLocal(sword.toGlobal(hiltLocal));
       const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
       swipeTrail.addSample(hilt, tip);
+
+      // bat enemy projectiles back (original Sundae slash-back mechanic)
+      const reflected = enemyShots.slashAt(hilt.x, hilt.y, tip.x, tip.y, player.facing);
+      if (reflected > 0) {
+        audio.playRandom(['impact1', 'impact2', 'impact3'], 0, 0.5);
+        hitstop.freeze(0.03);
+      }
 
       for (const enemy of wave.enemies) {
         if (!enemy.alive || enemy.invincible || hitThisSwing.has(enemy)) continue;
@@ -1013,6 +1059,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
   hud.addChild(hpBack, hpBar, scoreText, waveText, coinIcon, coinText, starIcon, starText, levelText, centerText, bossWarnText, bossBarBack, bossBar, bossName, spells);
 
   function drawHud(): void {
+    // the world + HUD leaked through the title overlay ("Score 0" behind the logo)
+    hud.visible = !atTitle;
+    shakeRoot.visible = !atTitle;
+    if (atTitle) return;
     const ratio = Math.max(0, player.hp / player.maxHp);
     hpBar.clear();
     hpBar.roundRect(12, 12, 150 * ratio, 12, 3).fill({ color: ratio > 0.35 ? 0x4dff6a : 0xff4d4d });
@@ -1028,8 +1078,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
         ? ''
         : `wave ${Math.max(0, wave.segmentIndex) + 1}  ·  kills ${wave.killsThisSegment}/${wave.currentQuota || '–'}`;
     }
-    if (player.dead) {
-      centerText.text = 'YOU DIED\nR / Start: retry  ·  T: title';
+    if (player.dead && !scoreScreen.visible) {
+      centerText.text = 'YOU DIED';
       centerText.style.fill = 0xff5555;
     } else if (gameComplete) {
       centerText.text = `GAME COMPLETE!\nscore ${score}  ·  T: title`;
@@ -1098,7 +1148,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
     gameComplete = false;
     atTitle = true;
     title.visible = true;
+    title.showSplash();
     title.refresh(save);
+    title.locked = metaShop.visible; // T pressed with the AP shop still open
     audio.playMusic('menu_title', 1);
   }
 
@@ -1260,9 +1312,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
     title.refresh(save);
   };
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyS' && atTitle && !metaShop.visible) {
+    // the AP shop opens from the title OR the run tally — the progression
+    // loop has to be visible in the run flow, not hidden behind a key hint
+    if (e.code === 'KeyS' && (atTitle || scoreScreen.visible) && !metaShop.visible && !dialogue.active) {
       metaShop.open();
-      title.locked = true;
+      if (atTitle) title.locked = true;
     }
   });
 
@@ -1299,6 +1353,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
       if (dialogue.active) {
         dialogue.update(FIXED_DT);
         dialogue.pollInput(input);
+        input.postUpdate();
+        continue;
+      }
+
+      // AP shop opened from the run tally
+      if (metaShop.visible) {
+        metaShop.pollInput(input);
         input.postUpdate();
         continue;
       }
@@ -1344,8 +1405,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
         levelsNoDeath = 0;
         save.deaths++;
         writeSave(save);
+        deathTallyTimer = 1.8; // then the run tally + AP payout (original gotoScoreScreen)
       }
       prevDead = player.dead;
+      if (deathTallyTimer > 0 && player.dead) {
+        deathTallyTimer -= FIXED_DT;
+        if (deathTallyTimer <= 0 && !scoreScreen.visible) showDeathTally();
+      }
       updateCountdown();
       if (shopkeeper) {
         shopkeeper.update(FIXED_DT, player);

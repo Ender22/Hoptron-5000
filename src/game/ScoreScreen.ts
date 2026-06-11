@@ -13,6 +13,8 @@ export interface LevelTally {
   apEarned: number;
   newBestScore: boolean;
   finalLevel: boolean;
+  /** run ended in death: header + controls change (retry instead of continue) */
+  death?: boolean;
 }
 
 const COUNT_TIME = 0.7; // seconds per line
@@ -86,7 +88,11 @@ export class ScoreScreen extends Container {
     this.tally = tally;
     this.elapsed = 0;
     this.recordPlayed = false;
-    this.header.text = tally.finalLevel ? 'GAME COMPLETE!' : `LEVEL ${tally.levelNumber} CLEAR!`;
+    this.header.text = tally.death ? 'YOU DIED' : tally.finalLevel ? 'GAME COMPLETE!' : `LEVEL ${tally.levelNumber} CLEAR!`;
+    this.header.style.fill = tally.death ? 0xff5555 : 0xffe066;
+    this.continueText.text = tally.death
+      ? 'JUMP: retry  ·  T: title  ·  S: spend AP in the shop'
+      : 'JUMP / ENTER: continue  ·  S: spend AP in the shop';
     this.lines[0].target = tally.kills;
     this.lines[1].target = tally.score;
     this.lines[2].target = tally.apEarned;

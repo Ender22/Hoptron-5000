@@ -24,6 +24,14 @@ export class Boss extends Enemy {
   /** poor man's DelayedCall list (original juggler.delayCall) */
   private delayed: { t: number; fn: () => void }[] = [];
 
+  /** last player view seen by update() — for onHurt/delayed handlers that get no player arg */
+  protected lastPlayer: PlayerView | null = null;
+
+  update(dt: number, player: PlayerView): void {
+    this.lastPlayer = player;
+    super.update(dt, player);
+  }
+
   protected after(seconds: number, fn: () => void): void {
     this.delayed.push({ t: seconds, fn });
   }

@@ -8,7 +8,7 @@ import type { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import { Boss } from './Boss';
 import type { EnemyType, ProjectileType } from './data/levelData';
-import { Enemy, type PlayerView } from './Enemy';
+import { Enemy, ENEMY_SCALE, type PlayerView } from './Enemy';
 import { GROUND_Y } from './PlayerController';
 
 function rand(min: number, max: number): number {
@@ -57,6 +57,8 @@ export class PowerSwat extends Enemy {
   private offX = 0;
   private offY = 0;
   private t = 0;
+  private grow = 0;
+  private targetScale = ENEMY_SCALE;
 
   attachTo(parent: Enemy, offX: number, offY: number): void {
     this.parentBoss = parent;
@@ -65,19 +67,35 @@ export class PowerSwat extends Enemy {
     this.flying = true;
     this.canDamage = false;
     this.faceOverride = offX > 0 ? 1 : -1;
+    // original PowerSwat.restore(): scale 0 -> 1 over 1.0s (EASE_OUT_BACK), oscillation starts at 1.1s
+    this.grow = 0;
+    this.t = 0;
+    this.targetScale = this.baseScale;
+    this.setBaseScale(0.001);
     this.play('idle');
   }
 
   protected runAI(dt: number, _player: PlayerView): void {
     if (!this.parentBoss || !this.parentBoss.alive) return;
+    this.xVel = 0;
+    this.yVel = 0;
+    if (this.grow < 1.1) {
+      // grow-in phase: hold position at the attach offset while scaling up
+      this.grow += dt;
+      const u = Math.min(1, this.grow / 1.0);
+      const back = 1.70158; // ease-out-back overshoot
+      const eased = 1 + (back + 1) * (u - 1) ** 3 + back * (u - 1) ** 2;
+      this.setBaseScale(this.targetScale * Math.max(0.001, eased));
+      this.x = this.parentBoss.x + this.offX;
+      this.y = this.parentBoss.y + this.offY;
+      return;
+    }
     this.t += dt;
     // oscillate toward screen center and up 50px (original tween1/tween2 0.6s each)
     const u = (1 - Math.cos((this.t / 1.2) * Math.PI * 2)) / 2;
     const inward = this.offX > 0 ? -50 : 50;
     this.x = this.parentBoss.x + this.offX + inward * u;
     this.y = this.parentBoss.y + this.offY - 50 * u;
-    this.xVel = 0;
-    this.yVel = 0;
   }
 
   protected onDeath(): void {
@@ -93,7 +111,8 @@ export class PowerSwat extends Enemy {
  * far side from the player.
  */
 class WatermelonBoss extends Boss {
-  private actions = ['attack', 'jump', 'gunshot1', 'gunshot2', 'attack', 'jump', 'gunshot1', 'attack', 'jump', 'gunshot2'];
+  // original Boss_Watermelon.as:15 — double gunshot only at the very end of the loop
+  private actions = ['attack', 'jump', 'gunshot1', 'attack', 'jump', 'gunshot2', 'attack', 'jump', 'gunshot1', 'gunshot2'];
   private actionIndex = 0;
   private actionTimer = 0;
   private isJumping = false;
@@ -173,7 +192,8 @@ class WatermelonBoss extends Boss {
         // gunshot1 / gunshot2 — 5-shot volley
         this.spriter.playAnim(action === 'gunshot1' ? 'shoot1' : 'shoot2', 'idle', null, true);
         this.shotIndex = 0;
-        this.after(0.07, () => this.fireSeed(true));
+        // first shot at 0.07 + 0.22 = 0.29s (original getAction -> startShooting -> shootOne)
+        this.after(0.29, () => this.fireSeed(true));
         this.actionTimer = 1.6;
       }
     }
@@ -188,12 +208,12 @@ class WatermelonBoss extends Boss {
     const p1 = this.pointPos(1);
     const sx = p0?.x ?? this.x + 50 * (this.faceOverride ?? 1);
     const sy = p0?.y ?? this.y - 60;
-    // aim along the gun axis (points 0 -> 1), else at the player
+    // aim along the gun axis, barrel-base -> muzzle (original shootAnglePoint = pt0 - pt1)
     let dx = (this.faceOverride ?? 1) * 1;
     let dy = -0.1;
     if (p0 && p1) {
-      dx = p1.x - p0.x;
-      dy = p1.y - p0.y;
+      dx = p0.x - p1.x;
+      dy = p0.y - p1.y;
     }
     const len = Math.max(1, Math.hypot(dx, dy));
     audio.play('projectileShot', 0, 0.6);
@@ -208,7 +228,12 @@ class WatermelonBoss extends Boss {
 
   protected onHurt(): void {
     if (this.spriter.currentAnimationName !== 'idle' || this.isJumping) return;
-    if (Math.random() < 0.6) this.after(0.31, () => this.jumpAway());
+    if (Math.random() < 0.5) {
+      // original: randomNumber(0,5) <= 2 — 50%
+      this.after(0.31, () => this.jumpAway());
+    } else {
+      this.spriter.playAnim('hurt', 'idle', null, true);
+    }
   }
 
   private jumpAway(): void {
@@ -233,10 +258,11 @@ class WatermelonBoss extends Boss {
     this.canGoOffScreen = false;
     this.yVel = 15;
     this.xVel = 0;
-    // drop in on the opposite side from the player
-    this.x = this.x < 400 ? 700 : 100;
+    // drop in on the opposite side from the PLAYER (original LevelBase.bunny.x < 400)
+    const px = this.lastPlayer?.x ?? 400;
+    this.x = px < 400 ? 700 : 100;
     this.y = -20;
-    this.faceOverride = this.x > 400 ? -1 : 1;
+    this.faceOverride = px < 400 ? -1 : 1;
     this.spriter.playAnim('crush', 'idle', null, true);
     this.services?.shake(3);
     this.actionTimer = 1.1;
@@ -261,6 +287,7 @@ class DurianBoss extends Boss {
   private doingSpinAttack = false;
   private spinDir = 1;
   private spinSlam = false;
+  private slideTo: { x: number; t: number; total: number; sx: number } | null = null;
   private isSlamming = false;
   private flyUpForSlam = false;
   private slamIndex = 0;
@@ -277,7 +304,9 @@ class DurianBoss extends Boss {
     this.faceOverride = -1;
     if (this.spriter.hasAnim('spawn')) this.spriter.playAnim('spawn', 'idle', null, true);
     this.actionTimer = 5.5;
-    this.after(2.5, () => this.spawnSwats());
+    // original: swats exist from the start (placed by level setup) and scale in;
+    // one-tick delay only because services is injected after spawnAt
+    this.after(0.05, () => this.spawnSwats());
   }
 
   private spawnSwats(): void {
@@ -306,6 +335,15 @@ class DurianBoss extends Boss {
 
     if (this.powered) this.invincible = true; // shouldBeInvincible
 
+    // powerDown edge slide (original tweenOnScreen: 0.5s EASE_OUT to 50/750)
+    if (this.slideTo) {
+      const s = this.slideTo;
+      s.t += dt;
+      const u = Math.min(1, s.t / s.total);
+      this.x = s.sx + (s.x - s.sx) * (1 - (1 - u) ** 2);
+      if (u >= 1) this.slideTo = null;
+    }
+
     // ---- motion phases ----
     if (this.doingSpinAttack) {
       this.xVel = Math.max(-t.maxMovementSpeed, Math.min(t.maxMovementSpeed, this.xVel + t.acceleration * this.spinDir));
@@ -327,6 +365,8 @@ class DurianBoss extends Boss {
         this.yVel = 0;
         this.xVel = 0;
         this.spinSlam = false;
+        this.isSlamming = false; // original Boss_Durian.as:243-244 clears all slam state
+        this.doingSpinAttack = false;
         this.busy = false;
       }
       return;
@@ -393,17 +433,7 @@ class DurianBoss extends Boss {
         this.spriter.playAnim('startspin', 'spin', null, true);
         audio.play('durian_start_spin', 0, 0.6);
         this.busy = true;
-        this.after(1.2, () => {
-          if (this.x < 400) {
-            this.x = Math.min(this.x, -40);
-            this.spinDir = 1;
-          } else {
-            this.x = Math.max(this.x, 840);
-            this.spinDir = -1;
-          }
-          this.canDamage = true;
-          this.doingSpinAttack = true;
-        });
+        this.after(1.2, () => this.startSpinCross());
         this.actionTimer = 3;
         break;
 
@@ -431,10 +461,25 @@ class DurianBoss extends Boss {
 
       default: // laugh
         this.canDamage = false;
+        this.slamIndex = 0; // original Boss_Durian.as:123 — flyCrush always restarts at slam 0
         this.spriter.playAnim('laugh', 'idle', null, true);
         audio.play('durian_laugh', 0, 0.7);
         this.actionTimer = 2;
     }
+  }
+
+  /** teleport to an off-screen edge and spin across (original spinAttack) */
+  private startSpinCross(): void {
+    if (!this.alive) return;
+    if (this.x < 400) {
+      this.x = Math.min(this.x, -40);
+      this.spinDir = 1;
+    } else {
+      this.x = Math.max(this.x, 840);
+      this.spinDir = -1;
+    }
+    this.canDamage = true;
+    this.doingSpinAttack = true;
   }
 
   private doSlam(): void {
@@ -453,7 +498,10 @@ class DurianBoss extends Boss {
     this.canDamage = false;
     this.flying = false; // falls to the real ground
     this.canGoOffScreen = false;
-    this.x = Math.max(50, Math.min(750, this.x));
+    if (this.x < 25 || this.x > 775) {
+      // original tweenOnScreen: 0.5s EASE_OUT slide onto the stage
+      this.slideTo = { x: this.x < 25 ? 50 : 750, t: 0, total: 0.5, sx: this.x };
+    }
     this.xVel = 0;
     this.yVel = 0;
     audio.play('durian_powerLoss', 0, 0.8);
@@ -472,7 +520,16 @@ class DurianBoss extends Boss {
       this.y = this.FLY_GROUND;
       this.spawnSwats();
     });
-    this.actionTimer = 3;
+    // mandatory recovery spin (original recoverPower -> spinAway at +1.2s -> spinAttack at +1.2s, next action +3s)
+    this.after(1.2, () => {
+      if (!this.alive || !this.powered) return;
+      this.spriter.playAnim('startspin', 'spin', null, true);
+      audio.play('durian_start_spin', 0, 0.6);
+      this.busy = true;
+      this.after(1.2, () => this.startSpinCross());
+      this.actionTimer = 3;
+    });
+    this.actionTimer = 9999;
   }
 
   protected onHurt(): void {
@@ -508,6 +565,7 @@ class EggplantBoss extends Boss {
   private isRapidPunch = false;
   private isUppercutting = false;
   private isTurnPunch = false;
+  private preTurnPunch = false;
   private rapidTurnTimer = 0;
 
   spawnAt(x: number, _y: number): void {
@@ -524,6 +582,7 @@ class EggplantBoss extends Boss {
     this.isRapidPunch = false;
     this.isUppercutting = false;
     this.isTurnPunch = false;
+    this.preTurnPunch = false;
   }
 
   protected runAI(dt: number, player: PlayerView): void {
@@ -549,6 +608,8 @@ class EggplantBoss extends Boss {
 
     if (this.spriter.currentAnimationName === 'idle') {
       this.faceOverride = player.x < this.x ? -1 : 1;
+      this.resetState(); // original idle branch clears lingering state every frame
+      this.xVel *= 0.95;
     }
 
     // one-two: check if the player got behind us (every 1s)
@@ -557,7 +618,7 @@ class EggplantBoss extends Boss {
       if (this.checkTurnTimer <= 0) {
         this.checkTurnTimer = 1;
         const behind = Math.sign(player.x - this.x) !== dir;
-        if (behind && Math.random() < 0.5) this.turnPunch();
+        if (behind && Math.random() < 1 / 3) this.turnPunch(); // original randomNumber(0,2) < 1
       }
     }
 
@@ -567,6 +628,8 @@ class EggplantBoss extends Boss {
 
   private chooseNewAttack(noRapid: boolean, player: PlayerView): void {
     if (!this.alive || this.spriter.currentAnimationName === 'spawn') return;
+    this.xVel = 0; // original Boss_Eggplant.as:68-69 zeroes momentum first
+    this.yVel = 0;
     this.resetState();
     this.checkTurnTimer = -1;
     this.faceOverride = player.x < this.x ? -1 : 1;
@@ -575,7 +638,8 @@ class EggplantBoss extends Boss {
     const hpFrac = this.hp / this.type.hp;
     const range = hpFrac > 0.7 ? 4 : hpFrac > 0.4 ? 5 : hpFrac > 0.2 ? 6 : 7;
     const min = noRapid ? 2 : 0;
-    const r = Math.floor(rand(min, range));
+    // inclusive upper bound like Helper.randomNumber(min, range)
+    const r = Math.floor(rand(min, range + 1));
 
     if (r <= 1) {
       // rapid punch
@@ -609,7 +673,7 @@ class EggplantBoss extends Boss {
   private turnAround(player: PlayerView): void {
     this.faceOverride = (this.faceOverride ?? 1) * -1;
     this.rapidTurnTimer = 3;
-    const dist = Math.abs(player.x - this.x);
+    const dist = Math.hypot(player.x - this.x, player.y - this.y); // original Point.distance
     if (Math.random() < 0.33 || dist > 235) {
       this.isRapidPunch = false;
       this.chooseNewAttack(true, player);
@@ -619,10 +683,13 @@ class EggplantBoss extends Boss {
   private turnPunch(): void {
     this.faceOverride = (this.faceOverride ?? 1) * -1;
     this.isOneTwo = false;
+    this.preTurnPunch = true; // windup blocks the uppercut escape (original preTurnPunch)
     this.checkTurnTimer = -1;
     this.spriter.playAnim('turnpunch', 'turnpunch_idle', null, true);
+    this.xVel = (this.faceOverride ?? 1) * 1; // original 1-unit crawl before the +15 lurch
     this.after(0.15, () => {
       this.canGoOffScreen = true;
+      this.preTurnPunch = false;
       this.isTurnPunch = true;
       this.after(2.2, () => this.returnToFight());
     });
@@ -630,7 +697,7 @@ class EggplantBoss extends Boss {
   }
 
   protected onHurt(): void {
-    if (this.isTurnPunch || this.isUppercutting) return;
+    if (this.isTurnPunch || this.preTurnPunch || this.isUppercutting) return;
     if (Math.random() < 1 / 7) this.after(0.31, () => this.upperCutOff());
   }
 
@@ -640,7 +707,7 @@ class EggplantBoss extends Boss {
     this.isUppercutting = true;
     this.flying = true;
     this.canGoOffScreen = true;
-    this.invincible = true;
+    // (no invincible: the original can still be hit during the escape arc)
     this.spriter.playAnim('uppercut_off', '', null, true);
     audio.play('shoryuken', 0, 0.1);
     this.after(0.3, () => {
@@ -660,7 +727,7 @@ class EggplantBoss extends Boss {
     this.yVel = 12;
     this.xVel = 0;
     // drop in right next to the player
-    const px = this.lastPlayerX;
+    const px = this.lastPlayer?.x ?? 400;
     if (px < 400) {
       this.x = px + 60;
       this.faceOverride = -1;
@@ -669,16 +736,12 @@ class EggplantBoss extends Boss {
       this.faceOverride = 1;
     }
     this.y = -20;
-    this.spriter.playAnim('smashdown', 'idle', null, true);
+    // original chains straight into chooseNewAttack when smashdown completes
+    this.spriter.playAnim('smashdown', '', () => {
+      this.actionTimer = 0.01;
+    }, true);
     this.services?.shake(3);
-    this.actionTimer = 0.8;
-  }
-
-  private lastPlayerX = 400;
-
-  update(dt: number, player: PlayerView): void {
-    this.lastPlayerX = player.x;
-    super.update(dt, player);
+    this.actionTimer = 9999;
   }
 }
 
@@ -711,7 +774,7 @@ class PumpkinBoss extends Boss {
   private readonly blastDef: ProjectileType = {
     id: -1,
     image: 'PumpkinBlast',
-    damageDone: 15,
+    damageDone: 20, // original injureBunny(20)
     disappearTime: 1.6,
     maxMovementSpeed: 14,
     effectedByGravity: false,
@@ -762,7 +825,7 @@ class PumpkinBoss extends Boss {
     }
 
     if (this.isEscapeSlash) {
-      this.xVel = this.x > 400 || this.xVel > 0 ? 15 : -15;
+      this.xVel = this.x > 400 ? 15 : -15; // original simple threshold (Boss_Pumpkin.as:535)
       if (this.y > 300) this.yVel = -5;
       else this.yVel = 0;
       if (this.x > 950 || this.x < -150) {
@@ -814,6 +877,7 @@ class PumpkinBoss extends Boss {
       this.returnToFight(player);
       return;
     }
+    const prevFace = this.faceOverride;
     this.faceOverride = player.x < this.x ? -1 : 1;
     const action = this.actions[this.actionIndex];
     this.actionIndex = (this.actionIndex + 1) % this.actions.length;
@@ -829,7 +893,7 @@ class PumpkinBoss extends Boss {
           this.spriter.playAnim('flyingslash_idle');
           this.isFlyingSlash = true;
         }, true);
-        this.startGlide(this.x, player.y - 50, 0.45);
+        this.startGlide(this.x, player.y, 0.45); // original aligns to the exact player y
         break;
 
       case 'throw_head':
@@ -845,6 +909,8 @@ class PumpkinBoss extends Boss {
         break;
 
       case 'sideblast':
+        // original keeps the current facing: the exit direction is whatever way it already faces
+        this.faceOverride = prevFace;
         this.flyingOffScreen = true;
         this.isSideBlast = true;
         this.canDamage = false;
@@ -870,7 +936,10 @@ class PumpkinBoss extends Boss {
     this.spriter.playAnim('throw_head', 'nohead_idle', null, true);
     this.after(0.5, () => {
       const headDef = this.def(1);
-      if (!headDef || !this.services) return;
+      if (!headDef || !this.services) {
+        this.catchHead();
+        return;
+      }
       audio.play('pumpkin_throwhead', 0, 0.8);
       const p0 = this.pointPos(0);
       const sx = p0?.x ?? this.x;
@@ -878,15 +947,21 @@ class PumpkinBoss extends Boss {
       const dx = player.x - sx;
       const dy = player.y - 30 - sy;
       const len = Math.max(1, Math.hypot(dx, dy));
-      this.services.shoot(headDef, sx, sy, (dx / len) * 8, (dy / len) * 8, { scale: this.baseScale });
+      // event-driven boomerang return (original BOOMERANG_COMPLETE -> boomerangReturned)
+      const ok = this.services.shoot(headDef, sx, sy, (dx / len) * 8, (dy / len) * 8, {
+        scale: this.baseScale,
+        onGone: () => this.catchHead(),
+      });
+      if (!ok) this.catchHead();
     });
-    // boomerang returns ~1.5s after launch (def disappearTime)
-    this.after(2.1, () => {
-      if (!this.alive) return;
-      this.noHead = false;
-      this.spriter.playAnim('catch_head', 'idle', null, true);
-      this.actionTimer = 2.5;
-    });
+  }
+
+  /** original boomerangReturned(): catch the head and resume */
+  private catchHead(): void {
+    if (!this.alive || !this.noHead) return;
+    this.noHead = false;
+    this.spriter.playAnim('catch_head', 'idle', null, true);
+    this.actionTimer = 2.5;
   }
 
   private shoot3(): void {
@@ -919,7 +994,8 @@ class PumpkinBoss extends Boss {
     this.spriter.playAnim('sideblast_idle', '', null, true);
     const fromLeft = this.x < 0;
     this.faceOverride = fromLeft ? 1 : -1;
-    this.after(1.5, () => {
+    // original idles off-screen for 3 seconds before gliding in (tween.delay = 3)
+    this.after(3, () => {
       this.startGlide(fromLeft ? 50 : 750, this.y, 0.75, () => this.sideBlast());
     });
   }
@@ -927,27 +1003,33 @@ class PumpkinBoss extends Boss {
   private sideBlast(): void {
     if (!this.alive) return;
     const dir = this.faceOverride ?? 1;
-    this.spriter.playAnim('sideblast', 'sideblast_idle', null, true);
     audio.play('pumpkin_shoot3', 0, 0.8);
     this.services?.shake(3);
-    this.services?.shoot(this.blastDef, this.x + 40 * dir, this.y - 30, 14 * dir, 0, {
-      scale: this.baseScale * 4,
-      rotation: Math.PI / 2,
+    // SUPER_BLAST screen-wide beam (original LevelBase:12018: 0.5s delay, 0.2s sweep, raycast, 20 dmg)
+    this.services?.shoot(this.blastDef, this.x + 40 * dir, this.y - 30, dir, 0, {
+      beam: true,
+      scale: this.baseScale,
     });
     this.blastCount++;
-    if (this.blastCount < 3) {
-      this.after(0.4, () => {
-        this.startGlide(this.x, rand(200, 330), 0.75, () => this.sideBlast());
-      });
-    } else {
-      this.after(1.2, () => {
-        this.startGlide(dir > 0 ? -150 : 950, this.y, 0.75, () => {
-          this.isSideBlast = false;
-          this.invincible = false;
-          this.actionTimer = 3.5;
+    // repeat is chained off the sideblast animation completing (original sideBlastVerticleTween)
+    this.spriter.playAnim('sideblast', '', () => {
+      if (!this.alive) return;
+      if (this.blastCount < 3) {
+        this.spriter.playAnim('sideblast_idle');
+        this.after(0.1, () => {
+          this.startGlide(this.x, rand(200, 330), 0.75, () => this.sideBlast());
         });
-      });
-    }
+      } else {
+        this.spriter.playAnim('sideblast_idle');
+        this.after(1.2, () => {
+          this.startGlide(dir > 0 ? -150 : 950, this.y, 0.75, () => {
+            this.isSideBlast = false;
+            this.invincible = false;
+            this.actionTimer = 3.5;
+          });
+        });
+      }
+    }, true);
   }
 
   private startGlide(x: number, y: number, seconds: number, then?: () => void): void {
@@ -978,9 +1060,9 @@ class PumpkinBoss extends Boss {
   }
 
   protected onHurt(): void {
-    // shrink with damage (original specialScale)
+    // shrink with damage (original specialScale = 0.75 - 0.6 * frac, bottoms out at 0.15)
     const frac = (this.type.hp - this.hp) / this.type.hp;
-    this.baseScale = Math.max(0.4, 0.75 - 0.45 * frac);
+    this.baseScale = Math.max(0.15, 0.75 - 0.6 * frac);
 
     if (this.isSideBlast || this.flyingOffScreen || this.isFlyingSlash || this.isEscapeSlash || this.noHead) return;
     if (Math.random() < 1 / 6) {
@@ -1014,6 +1096,10 @@ export class AttachedMinion extends Enemy {
   offX = 0;
   offY = 0;
   onDestroyed: (() => void) | null = null;
+  /** parent notification on a landed (non-blocked) hit — Hamburger heart triggers the fly escape */
+  onHurtHook: (() => void) | null = null;
+  /** reasserted every frame (the hurt-flash timer clears invincible on expiry) */
+  shouldBeInvincible = false;
   /** lit candles flicker a flame burst so they read as targets */
   flame = false;
   private flameTimer = 0;
@@ -1030,6 +1116,7 @@ export class AttachedMinion extends Enemy {
 
   protected runAI(dt: number, _player: PlayerView): void {
     if (!this.parentBoss) return;
+    if (this.shouldBeInvincible) this.invincible = true;
     const facing = Math.sign(this.parentBoss.spriter.scale.x) || 1;
     this.x = this.parentBoss.x + this.offX * facing;
     this.y = this.parentBoss.y + this.offY;
@@ -1044,6 +1131,10 @@ export class AttachedMinion extends Enemy {
     }
   }
 
+  protected onHurt(): void {
+    this.onHurtHook?.();
+  }
+
   protected onDeath(): void {
     this.onDestroyed?.();
   }
@@ -1056,6 +1147,7 @@ export class NoteMinion extends Enemy {
     super.spawnAt(x, y);
     this.flying = true;
     this.canDamage = true;
+    this.canGoOffScreen = true; // notes start at x=-100 off-screen (original addCakeMusicNotes)
     this.play('idle');
     audio.playRandom(['note1', 'note2', 'note3'], 0, 0.4);
     const tints = [0x118185, 0x9d6359, 0x14b36b, 0xaed15b, 0x89439a];
@@ -1156,6 +1248,11 @@ class SundaeBoss extends Boss {
     if (action === 'shootAll') {
       this.throwsLeft *= 2;
       this.throwKinds = ['cherry', 'banana', 'icecream'];
+      // original shuffles the rotation each shootAll (Helper.randomSortArray)
+      for (let i = this.throwKinds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.throwKinds[i], this.throwKinds[j]] = [this.throwKinds[j], this.throwKinds[i]];
+      }
     } else {
       this.throwKinds = [action === 'shootCherrie' ? 'cherry' : action === 'shootBanana' ? 'banana' : 'icecream'];
     }
@@ -1188,12 +1285,40 @@ class SundaeBoss extends Boss {
     audio.play('projectileShot', 0, 0.6);
 
     if (kind === 'icecream') {
-      // becomes a live scoop enemy where it lands (original activateIcecream)
-      this.services?.spawnChild('icecream', sx, sy, 7 * dir, -6);
+      // flies as a (harmless) projectile, then becomes a live scoop enemy with
+      // the projectile's momentum 1.2s later (original activateIcecream)
+      const ok = this.services?.shoot(
+        { id: -1, image: 'Sunday_IceCream', damageDone: 0, disappearTime: 1.2, maxMovementSpeed: 7, effectedByGravity: true, specialAIType: '', boomerang: false },
+        sx, sy, 7 * dir, -6,
+        {
+          scale: 0.8,
+          harmless: true,
+          onGone: (gx, gy) => {
+            if (!this.alive) return;
+            this.services?.spawnChild('icecream', gx, Math.min(gy, GROUND_Y), 7 * dir, 0);
+          },
+        },
+      );
+      if (!ok) this.services?.spawnChild('icecream', sx, sy, 7 * dir, -6);
     } else if (kind === 'cherry') {
       this.services?.shoot(
         { id: -1, image: 'Sunday_Cherry', damageDone: 20, disappearTime: 2.5, maxMovementSpeed: 9, effectedByGravity: true, specialAIType: '', boomerang: false },
-        sx, sy, 9 * dir, -6, { scale: 0.9 },
+        sx, sy, 9 * dir, -6,
+        {
+          scale: 0.9,
+          // original SundaeProjectile.explode(): shake, explosion_01, 20 dmg within 200px
+          onGone: (gx, gy, hitPlayer) => {
+            if (hitPlayer || !this.alive) return;
+            audio.play('explosion_01', 0, 0.7);
+            this.services?.shake(2);
+            this.services?.burst(gx, gy, 'explosion_yellow', 10);
+            const px = this.lastPlayer?.x ?? -9999;
+            const py = (this.lastPlayer?.y ?? -9999) - 40;
+            if (Math.hypot(px - gx, py - gy) < 200) {
+              this.services?.hurtPlayer(20, Math.sign(px - gx) || 1);
+            }
+          },
+        },
       );
     } else {
       const dx = player.x - sx;
@@ -1219,10 +1344,13 @@ class SundaeBoss extends Boss {
     this.flyingAttack = false;
     this.invincible = false;
     this.canDamage = false;
-    this.canUpdate = true;
+    this.canUpdate = true; // original sets canUpdate=false, but our delayed-call recover ticks in runAI
     this.xVel = 0;
     audio.play('durian_powerLoss', 0, 0.7);
-    this.spriter.playAnim('get_stunned22', 'stunned_idle', null, true, true);
+    // original gotStunned callback: idle then stunned_idle once get_stunned22 finishes
+    this.spriter.playAnim('get_stunned22', '', () => {
+      if (this.alive) this.spriter.playAnim('stunned_idle');
+    }, true, true);
     this.after(6, () => this.recover());
   }
 
@@ -1262,6 +1390,8 @@ class CakeBoss extends Boss {
   private candlesRemaining = 0;
   private stunned = false;
   private isFlyingUp = false;
+  /** forced action override (original recoverComplete hardcodes getAction('flyup')) */
+  private forceNext: string | null = null;
 
   spawnAt(x: number, _y: number): void {
     Enemy.prototype.spawnAt.call(this, x, GROUND_Y);
@@ -1357,8 +1487,9 @@ class CakeBoss extends Boss {
   }
 
   private getAction(player: PlayerView): void {
-    const action = this.actions[this.actionIndex];
-    this.actionIndex = (this.actionIndex + 1) % this.actions.length;
+    const action = this.forceNext ?? this.actions[this.actionIndex];
+    if (this.forceNext) this.forceNext = null;
+    else this.actionIndex = (this.actionIndex + 1) % this.actions.length;
     this.actionTimer = 9999;
     const hpf = this.hpFrac();
 
@@ -1375,7 +1506,7 @@ class CakeBoss extends Boss {
           this.handBlast(6, player);
           this.handBlast(7, player);
         });
-        this.after(1.2, () => {
+        this.after(1.205, () => {
           this.handBlast(6, player);
           this.handBlast(7, player);
         });
@@ -1406,34 +1537,45 @@ class CakeBoss extends Boss {
         this.spriter.playAnim('sing', '', () => {
           if (this.alive) this.play('dance');
         }, true);
-        // 20 music notes staggered 0.45s apart, random heights
+        // 20 music notes staggered 0.45s apart, random heights (original spawn x = -100)
         for (let i = 0; i < 20; i++) {
           this.after(0.5 + i * 0.45, () => {
             if (!this.alive || this.stunned) return;
-            this.services?.spawnChild('note', -60, 100 + Math.random() * 205, 0, 0);
+            this.services?.spawnChild('note', -100, 100 + Math.random() * 205, 0, 0);
           });
         }
         this.actionTimer = 11.5 + 1.5 * hpf;
         break;
       }
       default: {
-        // fireCandleMissles: 3 homing candles launched upward
+        // fireCandleMissles: 3 candles fired STRAIGHT UP (original xVel 0 / yVel -7, no homing),
+        // chained off the lowercandle2 animation completing
+        const missileDef = this.projectileMap?.get(this.type.projectileIds[0] ?? 1) ?? null;
         this.spriter.playAnim('lowercandle2', '', () => {
           if (!this.alive) return;
           this.spriter.playAnim('firecandle', 'idle_nocandle', null, true);
+          let fired = 0;
+          const fireOne = () => {
+            if (!this.alive || this.stunned) {
+              this.actionTimer = 2;
+              return;
+            }
+            if (missileDef) {
+              audio.play('projectileShot', 0, 0.6);
+              this.services?.shoot(missileDef, this.x, this.y - 100, 0, -7, { scale: 0.5, rotation: -Math.PI / 2, homing: false });
+            }
+            if (++fired < 3) {
+              this.after(0.83, fireOne);
+            } else {
+              // the 6s pause starts only after the 3rd missile (original getNextAction(6))
+              this.actionTimer = 6;
+              this.after(0.83, () => {
+                if (this.alive && !this.stunned) this.spriter.playAnim('raisecandle2', 'idle', null, true);
+              });
+            }
+          };
+          this.after(0.33, fireOne);
         }, true);
-        const missileDef = this.projectileMap?.get(this.type.projectileIds[0] ?? 1) ?? null;
-        for (let i = 0; i < 3; i++) {
-          this.after(1.3 + i * 0.83, () => {
-            if (!this.alive || this.stunned || !missileDef) return;
-            audio.play('projectileShot', 0, 0.6);
-            this.services?.shoot(missileDef, this.x, this.y - 100, 0, -7, { scale: 0.5, rotation: -Math.PI / 2 });
-          });
-        }
-        this.after(1.3 + 3 * 0.83, () => {
-          if (this.alive && !this.stunned) this.spriter.playAnim('raisecandle2', 'idle', null, true);
-        });
-        this.actionTimer = 6;
       }
     }
   }
@@ -1446,11 +1588,17 @@ class CakeBoss extends Boss {
     const dir = this.faceOverride ?? 1;
     const sx = p?.x ?? this.x + 60 * dir;
     const sy = p?.y ?? this.y - 90;
-    const ex = sx + 170 * dir;
-    this.services?.burst(sx + 85 * dir, sy, 'explosion_yellow', 7);
+    // ray follows the authored arm angle (original: deg2rad(90 - point.angle), cos/sin offsets, 150px)
+    const ptAngle = this.spriter.activePoints[pointIndex]?.angle;
+    const theta = ptAngle !== undefined ? (90 - ptAngle) * (Math.PI / 180) - Math.PI / 2 : 0;
+    const ex = sx + Math.cos(theta) * 150 * dir;
+    const ey = sy + Math.sin(theta) * 150;
+    this.services?.burst((sx + ex) / 2, (sy + ey) / 2, 'explosion_yellow', 7);
     const px = player.x;
     const py = player.y - 40;
-    const within = Math.min(sx, ex) - 20 <= px && px <= Math.max(sx, ex) + 20 && Math.abs(py - sy) < 55;
+    const within =
+      Math.min(sx, ex) - 20 <= px && px <= Math.max(sx, ex) + 20 &&
+      Math.min(sy, ey) - 55 <= py && py <= Math.max(sy, ey) + 55;
     if (within) this.services?.hurtPlayer(20, dir);
   }
 
@@ -1468,9 +1616,15 @@ class CakeBoss extends Boss {
       this.stunned = false;
       this.invincible = true;
       audio.play('sundae_roar', 0.28, 0.7);
-      this.spriter.playAnim('recover', 'idle', null, true, true);
-      this.after(1.1, () => this.lightCandles());
-      this.actionTimer = 2;
+      // original recoverComplete: relight all candles, then force flyup as the next action
+      this.spriter.playAnim('recover', '', () => {
+        if (!this.alive) return;
+        this.spriter.playAnim('idle');
+        this.lightCandles();
+        this.forceNext = 'flyup';
+        this.actionTimer = 0.01;
+      }, true, true);
+      this.actionTimer = 9999;
     });
   }
 
@@ -1504,6 +1658,12 @@ class NoodlesBoss extends Boss {
   private mode: 'idle' | 'approachSlash' | 'approachCombo' | 'toWall' | 'wallArc' | 'onWall' | 'pushFly' | 'executing' | 'defend' | 'backflip' = 'idle';
   private slashesLeft = 0;
   private damageWindow = false;
+  /** combo holds xVel=2 flat for the whole anim (original EXECUTING_ACTION skips the 0.85 decay) */
+  private comboHold = false;
+  /** superslash sweep: damage anywhere along the travelled band, not just at launch */
+  private superPass = false;
+  private superStartX = 0;
+  private superHitDone = false;
 
   spawnAt(x: number, _y: number): void {
     Enemy.prototype.spawnAt.call(this, x, GROUND_Y);
@@ -1588,7 +1748,17 @@ class NoodlesBoss extends Boss {
         return;
       case 'executing':
       case 'backflip':
-        this.xVel *= 0.85;
+        if (this.superPass && !this.superHitDone) {
+          // sweeping slash line: hit anywhere inside the band travelled so far
+          const x0 = Math.min(this.superStartX, this.x) - 30;
+          const x1 = Math.max(this.superStartX, this.x) + 30;
+          if (player.x >= x0 && player.x <= x1 && Math.abs(player.y - 40 - (this.y - 30)) < 55) {
+            this.superHitDone = true;
+            this.services?.hurtPlayer(20, this.faceOverride ?? 1);
+          }
+        }
+        if (this.comboHold) this.xVel = 2 * (this.faceOverride ?? 1);
+        else this.xVel *= 0.85;
         break;
       default:
         this.xVel *= 0.85;
@@ -1602,6 +1772,8 @@ class NoodlesBoss extends Boss {
   private chooseNewAttack(player: PlayerView): void {
     if (!this.alive) return;
     this.damageWindow = false;
+    this.comboHold = false;
+    this.superPass = false;
     this.invincible = false;
     this.flying = false;
     this.faceOverride = player.x < this.x ? -1 : 1;
@@ -1632,6 +1804,7 @@ class NoodlesBoss extends Boss {
   private startSlash(): void {
     this.mode = 'executing';
     this.damageWindow = true;
+    this.comboHold = false;
     this.xVel = 0;
     this.spriter.playAnim('slash', 'idle', null, true);
     this.after(0.29, () => {
@@ -1643,6 +1816,7 @@ class NoodlesBoss extends Boss {
   private startCombo(): void {
     this.mode = 'executing';
     this.damageWindow = true;
+    this.comboHold = true; // xVel held flat for the whole combo (original)
     this.spriter.playAnim('slashCombo', 'idle', null, true);
     this.xVel = 2 * (this.faceOverride ?? 1);
     this.actionTimer = rand(1.8, 2.5);
@@ -1652,18 +1826,21 @@ class NoodlesBoss extends Boss {
     if (!this.alive) return;
     this.mode = 'executing';
     this.damageWindow = true;
+    this.comboHold = false;
     audio.play('noodles_superslash', 0, 0.8);
     this.spriter.playAnim('superslash', '', () => this.endSuperSlash(player), true);
     this.xVel = 100 * (this.faceOverride ?? 1);
-    // full-width slash line at chest height (original CHECK_SHOT_COLLISION)
-    if (Math.abs(player.y - 40 - (this.y - 30)) < 55) {
-      this.services?.hurtPlayer(20, this.faceOverride ?? 1);
-    }
+    // full-width sweeping slash line at chest height (original CHECK_SHOT_COLLISION) —
+    // checked every frame across the travelled band in runAI
+    this.superPass = true;
+    this.superStartX = this.x;
+    this.superHitDone = false;
   }
 
   private endSuperSlash(player: PlayerView): void {
     if (!this.alive) return;
     this.xVel = 0;
+    this.superPass = false;
     this.slashesLeft--;
     if (this.slashesLeft > 0) {
       this.faceOverride = this.x < 400 ? 1 : -1;
@@ -1720,7 +1897,7 @@ class NoodlesBoss extends Boss {
       this.invincible = false;
       this.startBackflip();
     } else {
-      this.spriter.playAnim('defend_hit', 'defend_idle', null, true);
+      this.spriter.playAnim('defend_hit', 'idle', null, true); // original drops the guard after defend_hit
     }
   }
 
@@ -1758,6 +1935,9 @@ class SushiBoss extends Boss {
   private orbs: Enemy[] = [];
   private orbAngles: number[] = [];
   private orbContact: number[] = [];
+  /** orbit only starts after the 2s scale-in tween (original sushiActive) */
+  private orbsActive = false;
+  private orbGrow = 0;
   private rapid = false;
   private rapidTimer = 0;
   private rapidFlip = 0;
@@ -1817,15 +1997,20 @@ class SushiBoss extends Boss {
         this.orbs = [];
         this.orbAngles = [0, Math.PI / 1.33, Math.PI * 1.33];
         this.orbContact = [0, 0, 0];
+        // original: scale 0 -> 0.4 over 1s after a 1s delay; sushiActive only on tween complete
+        this.orbsActive = false;
+        this.orbGrow = 0;
         for (let i = 0; i < 3; i++) {
           const orb = this.services?.spawnChild('sushiroll', this.x, this.y - 75, 0, 0);
           if (orb) {
             orb.canUpdate = false;
             orb.canDamage = false;
             orb.invincible = true;
+            orb.setBaseScale(0.001);
             this.orbs.push(orb);
           }
         }
+        this.after(2, () => (this.orbsActive = true));
         this.actionTimer = 4;
         break;
       }
@@ -1839,8 +2024,12 @@ class SushiBoss extends Boss {
         this.noFish = true;
         this.spriter.playAnim('throwFish', 'idle_noFish', null, true);
         this.after(0.435, () => {
+          if (!this.alive) return;
           const fishDef = this.projectileMap?.get(1);
-          if (!fishDef || !this.services || !this.alive) return;
+          if (!fishDef || !this.services) {
+            this.catchFish();
+            return;
+          }
           audio.play('projectileShot', 0, 0.6);
           const p0 = this.pointPos(0);
           const sx = p0?.x ?? this.x + 40 * (this.faceOverride ?? 1);
@@ -1848,14 +2037,12 @@ class SushiBoss extends Boss {
           const dx = player.x - sx;
           const dy = player.y - 30 - sy;
           const len = Math.max(1, Math.hypot(dx, dy));
-          this.services.shoot(fishDef, sx, sy, (dx / len) * 8, (dy / len) * 8, { rotSpeed: 0.5 });
-        });
-        // boomerang returns (def disappearTime 1.7)
-        this.after(2.2, () => {
-          if (!this.alive) return;
-          this.noFish = false;
-          this.spriter.playAnim('catchFish', this.idleAnim(), null, true);
-          this.actionTimer = 2;
+          // event-driven boomerang catch (original boomerangReturned)
+          const ok = this.services.shoot(fishDef, sx, sy, (dx / len) * 8, (dy / len) * 8, {
+            rotSpeed: 0.5,
+            onGone: () => this.catchFish(),
+          });
+          if (!ok) this.catchFish();
         });
         break;
       }
@@ -1870,6 +2057,8 @@ class SushiBoss extends Boss {
         this.actionTimer = 1;
         break;
       case 'forward_blast':
+        // original turns AWAY from the player first, then blasts backward out of the pot
+        this.faceOverride = player.x < this.x ? 1 : -1;
         this.spriter.playAnim('pre_forward_blast', '', () => {
           if (!this.alive) return;
           this.spriter.playAnim('forward_blast', '', () => {
@@ -1883,30 +2072,45 @@ class SushiBoss extends Boss {
             audio.play('projectileShot', 0, 0.6);
             this.services.shake(2);
             const p0 = this.pointPos(0);
-            this.services.shoot(soyDef, p0?.x ?? this.x, p0?.y ?? this.y - 70, 12 * (this.faceOverride ?? 1), 0, { rotSpeed: 1 });
+            // fires opposite the facing — i.e. toward the player it turned away from
+            this.services.shoot(soyDef, p0?.x ?? this.x, p0?.y ?? this.y - 70, -12 * (this.faceOverride ?? 1), 0, { rotSpeed: 1 });
           });
         }, true);
         break;
       case 'blast': {
-        // 3 wasabi mortars up, then 3 falling from the sky
+        // 3 upward wasabi mortars, strictly sequential per animation (original blastOne/blastFinished),
+        // then idle_noHat and 3 falling from the sky
         this.xVel = 0;
         const wasabiDef = this.projectileMap?.get(3);
-        for (let i = 0; i < 3; i++) {
-          this.after(0.2 + i * 0.5, () => {
+        this.actionTimer = 9999;
+        let count = 0;
+        const blastOne = () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('blast', '', () => {
+            if (!this.alive) return;
+            if (++count < 3) {
+              blastOne();
+            } else {
+              this.play('idle_noHat');
+              for (let i = 0; i < 3; i++) {
+                this.after(i * 0.425, () => {
+                  if (!this.alive || !wasabiDef || !this.services) return;
+                  this.services.shoot(wasabiDef, [200, 400, 600][i], -50, [-1, 0, 1][i], 10, { scale: 1 });
+                });
+              }
+              this.actionTimer = 3 * 0.425 + 0.5; // original chooseNewActionSoon(0.5) after the last drop
+            }
+          }, true);
+          this.after(0.185, () => {
             if (!this.alive || !wasabiDef || !this.services) return;
-            this.spriter.playAnim('blast', this.idleAnim(), null, true);
+            if (this.spriter.currentAnimationName !== 'blast') return;
             audio.play('projectileShot', 0, 0.6);
+            this.services.shake(1);
             const p0 = this.pointPos(0);
-            this.services.shoot(wasabiDef, p0?.x ?? this.x, p0?.y ?? this.y - 90, [-2, 0, 2][i], -20, { scale: 0.6 });
+            this.services.shoot(wasabiDef, p0?.x ?? this.x, p0?.y ?? this.y - 90, [-2, 0, 2][count], -20, { scale: 0.6 });
           });
-        }
-        for (let i = 0; i < 3; i++) {
-          this.after(1.8 + i * 0.425, () => {
-            if (!this.alive || !wasabiDef || !this.services) return;
-            this.services.shoot(wasabiDef, [200, 400, 600][i], -50, [-1, 0, 1][i], 10, { scale: 1 });
-          });
-        }
-        this.actionTimer = 3.6;
+        };
+        blastOne();
         break;
       }
       default: {
@@ -1931,8 +2135,30 @@ class SushiBoss extends Boss {
     }
   }
 
+  /** original boomerangReturned(): catch the fish and resume */
+  private catchFish(): void {
+    if (!this.alive || !this.noFish) return;
+    this.noFish = false;
+    this.spriter.playAnim('catchFish', this.idleAnim(), null, true);
+    this.actionTimer = 2;
+  }
+
   /** orbit the sushi shields and check player contact (150ms dwell) */
   private updateOrbs(dt: number, player: PlayerView): void {
+    if (!this.orbsActive) {
+      // scale-in at the call position: 1s delay, then 1s tween to full size
+      this.orbGrow += dt;
+      const u = Math.max(0, Math.min(1, this.orbGrow - 1));
+      for (const orb of this.orbs) {
+        if (!orb.alive) continue;
+        orb.setBaseScale(Math.max(0.001, 0.55 * u));
+        orb.x = this.x;
+        orb.y = this.y - 75;
+        orb.xVel = 0;
+        orb.yVel = 0;
+      }
+      return;
+    }
     for (let i = 0; i < this.orbs.length; i++) {
       const orb = this.orbs[i];
       if (!orb.alive) continue;
@@ -1968,7 +2194,11 @@ class SushiBoss extends Boss {
         this.canDamage = true;
         this.rapid = true;
         this.rapidTimer = 3;
-        this.rapidFlip = 0;
+        this.rapidFlip = 0.25; // first direction flip after 0.25s
+        // original startRapid lunges toward the player immediately at xVel 4
+        const px = this.lastPlayer?.x ?? 400;
+        this.xVel = 4 * (Math.sign(px - this.x) || 1);
+        this.faceOverride = Math.sign(this.xVel) || 1;
         this.play('rapidCut');
       }, true);
       this.actionTimer = 9999;
@@ -2008,6 +2238,7 @@ class HamburgerBoss extends Boss {
   private stopSuckLoop: (() => void) | null = null;
   private flyPhase = 0;
   private sprayAngle = 0;
+  private glide: { x: number; y: number; time: number; total: number; sx: number; sy: number; then?: () => void } | null = null;
 
   spawnAt(x: number, _y: number): void {
     Enemy.prototype.spawnAt.call(this, x, GROUND_Y);
@@ -2020,13 +2251,16 @@ class HamburgerBoss extends Boss {
       for (let i = 0; i < 15; i++) this.after(0.05 * i, () => this.fireSeed(this.sprayAngle += 0.42));
     });
     this.after(2.2, () => {
-      const heart = this.services?.spawnChild('hamburger_heart', this.x, this.y - 60, 0, 0);
+      const heart = this.services?.spawnChild('hamburger_heart', this.x, this.y - 50, 0, 0);
       if (heart instanceof AttachedMinion) {
-        heart.attachTo(this, 0, -60);
+        heart.attachTo(this, 0, -50); // original setParentEnemy updateYOffset -50
         heart.invincible = true;
+        heart.shouldBeInvincible = true;
         heart.onDestroyed = () => {
           if (this.alive) this.services?.killEnemy(this);
         };
+        // heart damage triggers the burger's hurt + forced fly escape (original onHurt -> jumpAwaySoon)
+        heart.onHurtHook = () => this.onHeartHurt();
         this.heart = heart;
       }
     });
@@ -2036,6 +2270,21 @@ class HamburgerBoss extends Boss {
   protected runAI(dt: number, player: PlayerView): void {
     this.tickDelayed(dt);
     this.invincible = true; // the heart is the target
+
+    // fly-slam repositioning tween (original Tween EASE_IN_OUT over 1s)
+    if (this.glide) {
+      const g = this.glide;
+      g.time += dt;
+      const u = Math.min(1, g.time / g.total);
+      const ease = u < 0.5 ? 2 * u * u : 1 - 2 * (1 - u) ** 2;
+      this.x = g.sx + (g.x - g.sx) * ease;
+      this.y = g.sy + (g.y - g.sy) * ease;
+      if (u >= 1) {
+        this.glide = null;
+        g.then?.();
+      }
+      return;
+    }
 
     if (this.sucking) {
       this.suckTimer -= dt;
@@ -2049,14 +2298,17 @@ class HamburgerBoss extends Boss {
           this.spriter.playAnim('spit', 'idle', null, true);
           audio.play('hamburger_spit', 0, 0.8);
           this.after(0.8, () => {
-            this.services?.hurtPlayer(this.type.attackDmg, this.faceOverride ?? 1);
+            // original launches the bunny (ko_fly, xVel ±10 / yVel -7) — player-anim
+            // dependent, so a minimal knockback hit stands in for the throw
+            this.services?.hurtPlayer(1, this.faceOverride ?? 1);
             this.services?.shake(3);
             this.chewing = false;
             this.actionTimer = 2;
           });
         }, true);
         audio.play('hamburger_chew', 0, 0.8);
-        this.services?.hurtPlayer(Math.ceil(this.type.attackDmg / 2), 0);
+        // original injureBunnyFromHamburger: flat 30 at 0.2s into the chew
+        this.after(0.2, () => this.services?.hurtPlayer(30, 0));
         return;
       }
       if (this.suckTimer <= 0) {
@@ -2068,20 +2320,7 @@ class HamburgerBoss extends Boss {
     if (this.chewing) return;
 
     if (this.flyPhase === 1) {
-      // rising
-      if (this.y < -150) {
-        this.flyPhase = 2;
-        this.x = 100 + Math.random() * 600;
-        this.y = -60;
-        this.yVel = 0;
-        this.after(0.5, () => {
-          this.flyPhase = 3;
-          this.flying = false;
-          this.yVel = 6;
-          this.canDamage = true;
-          this.spriter.playAnim('slamDown', 'idle', null, true);
-        });
-      }
+      // rising off-screen; the reposition tween is scheduled from the fly action
       return;
     }
     if (this.flyPhase === 3) {
@@ -2102,7 +2341,10 @@ class HamburgerBoss extends Boss {
   }
 
   private setHeartExposed(exposed: boolean): void {
-    if (this.heart?.alive) this.heart.invincible = !exposed;
+    if (this.heart?.alive) {
+      this.heart.invincible = !exposed;
+      this.heart.shouldBeInvincible = !exposed;
+    }
   }
 
   private getAction(player: PlayerView): void {
@@ -2118,7 +2360,7 @@ class HamburgerBoss extends Boss {
         this.after(0.2, () => {
           for (let i = 0; i < 30; i++) this.after(0.05 * i, () => this.fireSeed(this.sprayAngle += 0.21));
         });
-        this.actionTimer = 3.8;
+        this.actionTimer = 2.2; // original: startShoot360 at 0.2s + chooseNewActionSoon(2)
         break;
       }
       case 'shoot': {
@@ -2131,7 +2373,7 @@ class HamburgerBoss extends Boss {
             });
           }
         });
-        this.actionTimer = 1.9;
+        this.actionTimer = 1.6; // original: 0.1s pre-delay + chooseNewActionSoon(1.5)
         break;
       }
       case 'laugh':
@@ -2152,15 +2394,41 @@ class HamburgerBoss extends Boss {
         }, true);
         break;
       default:
-        // fly slam
-        this.spriter.playAnim('flyUp', '', null, true);
-        this.after(0.295, () => {
-          this.flying = true;
-          this.canGoOffScreen = true;
-          this.yVel = -10;
-          this.flyPhase = 1;
-        });
+        this.startFly();
     }
+  }
+
+  /** fly slam (original addJumpVel -> prepareForSlam tween -> addSlamVel) */
+  private startFly(): void {
+    if (this.flyPhase !== 0 || this.chewing || this.glide) return;
+    if (this.sucking) this.endSuck(false);
+    this.actionTimer = 9999;
+    this.spriter.playAnim('flyUp', '', null, true);
+    this.after(0.295, () => {
+      this.flying = true;
+      this.canGoOffScreen = true;
+      this.yVel = -10;
+      this.flyPhase = 1;
+      // original: prepareForSlam at +1s, tween delay 0.25s, then 1s EASE_IN_OUT to (rand(100,700), 40)
+      this.after(1.25, () => {
+        if (!this.alive) return;
+        this.flyPhase = 2;
+        this.yVel = 0;
+        this.startGlide(100 + Math.random() * 600, 40, 1.0, () => {
+          this.flyPhase = 3;
+          this.flying = false;
+          this.yVel = 1; // gravity takes over (original addSlamVel yVel=1, not a launch)
+          this.canDamage = true;
+          this.spriter.playAnim('slamDown', 'idle', null, true);
+        });
+      });
+    });
+  }
+
+  private startGlide(x: number, y: number, seconds: number, then?: () => void): void {
+    this.xVel = 0;
+    this.yVel = 0;
+    this.glide = { x, y, time: 0, total: seconds, sx: this.x, sy: this.y, then };
   }
 
   private endSuck(playFinish: boolean): void {
@@ -2183,10 +2451,15 @@ class HamburgerBoss extends Boss {
     });
   }
 
-  protected onHurt(): void {
-    // heart was hit: hurt anim then immediate fly-slam (original jumpAway)
+  /** heart was hit: hurt anim, heart re-shielded, forced fly-slam escape (original onHurt + jumpAwaySoon) */
+  private onHeartHurt(): void {
+    if (!this.alive) return;
     if (this.sucking) this.endSuck(true);
+    this.setHeartExposed(false); // original heartInvincible()
     this.spriter.playAnim('hurt', 'idle', null, true);
+    this.after(0.25, () => {
+      if (this.alive) this.startFly();
+    });
   }
 
   dispose(): void {
@@ -2224,10 +2497,19 @@ class ComboBoss extends Boss {
   private stompLeft = false;
   private pieces: Enemy[] = [];
 
+  /** the 14 break-apart pieces and their body-part offsets (original LevelBase:4347-4420, × SCALE) */
+  private static readonly PIECE_LAYOUT: [string, number, number][] = [
+    ['pizza', -112, -368], ['pizza', 138, -334], ['pizza', -68, -120], ['pizza', 60, -106],
+    ['hotdog', -33, -307], ['hotdog', 46, -302], ['hotdog', -17, -220], ['hotdog', 30, -208],
+    ['nugget', -142, -383], ['nugget', 168, -347], ['nugget', -80, -80], ['nugget', 75, -75],
+    ['drink', 10, -210],
+    ['fries', 5, -360],
+  ];
+
   spawnAt(x: number, _y: number): void {
     Enemy.prototype.spawnAt.call(this, x, GROUND_Y);
     this.faceOverride = -1;
-    this.nextHpLevel = this.type.hp - Math.floor(this.type.hp / 4);
+    this.nextHpLevel = this.type.hp - 1000; // original: first break at maxHP - 1000
     if (this.spriter.hasAnim('spawn')) this.spriter.playAnim('spawn', 'idle', null, true);
     audio.play('combo_bigRoar', 1, 0.8);
     this.actionTimer = 3;
@@ -2237,7 +2519,11 @@ class ComboBoss extends Boss {
     this.tickDelayed(dt);
     const t = this.type;
 
-    if (this.broken) return;
+    if (this.broken) {
+      // safety net for pieces that died outright instead of KO'ing
+      if (this.pieces.length > 0 && this.pieces.every((p) => !p.alive || p.koDone)) this.reform();
+      return;
+    }
 
     if (this.mode === 'approach') {
       const range = this.approachAction === 'smash' ? 150 : 200;
@@ -2263,7 +2549,7 @@ class ComboBoss extends Boss {
         this.canDamage = false;
         this.faceOverride = dir * -1;
         this.play('idle');
-        this.actionTimer = 0.5;
+        this.actionTimer = 0.1; // original chooseNewActionSoon(0.1)
       }
       audio.playRandom(['combo_stomp1', 'combo_stomp2', 'combo_stomp3'], 0, 0.12);
       return;
@@ -2321,20 +2607,25 @@ class ComboBoss extends Boss {
           const dx = player.x - sx;
           const dy = player.y - 30 - sy;
           const len = Math.max(1, Math.hypot(dx, dy));
-          this.services.shoot(nuggetDef, sx, sy, (dx / len) * 10, (dy / len) * 10, { scale: 0.45 });
+          this.services.shoot(nuggetDef, sx, sy, (dx / len) * 10, (dy / len) * 10, { scale: 0.3 }); // original 0.3
+          this.actionTimer = 1.0; // original fireNugget -> chooseNewActionSoon(1)
         });
-        this.actionTimer = 1.5;
+        this.actionTimer = 9999;
         break;
       }
       default:
-        // roar: summon minions
+        // roar: summon minions — original spawnMoreComboEnemies: 6 enemies
+        // (ids 0,0,1,1,3,5) falling from above, staggered 0.2s
         this.spriter.playAnim('roar', 'idle', null, true);
         audio.playRandom(['combo_roar1', 'combo_roar2', 'combo_roar3'], 0, 0.8);
         this.services?.shake(5);
-        this.after(0.3, () => {
-          for (const name of ['hotdog', 'nugget']) {
-            this.services?.spawnChild(name, Math.random() < 0.5 ? -30 : 830, GROUND_Y, 0, 0);
-          }
+        this.after(0.05, () => {
+          const summons = ['hotdog', 'hotdog', 'drink', 'drink', 'nuggetbox', 'fries'];
+          summons.forEach((name, i) => {
+            this.after(0.2 * i, () => {
+              this.services?.spawnChild(name, 100 + Math.random() * 600, -20, 0, 0);
+            });
+          });
         });
         this.actionTimer = 3;
     }
@@ -2353,7 +2644,7 @@ class ComboBoss extends Boss {
   protected onHurt(): void {
     if (this.broken) return;
     if (this.hp > 0 && this.hp <= this.nextHpLevel) {
-      this.nextHpLevel -= Math.floor(this.type.hp / 4);
+      this.nextHpLevel -= 2000; // original fixed 2000 steps (7000/5000/3000)
       this.breakApart();
     }
   }
@@ -2370,12 +2661,17 @@ class ComboBoss extends Boss {
       this.services?.shake(4);
       this.invincible = true;
       this.spriter.visible = false;
-      // shatter into KO-able pieces; knock them all out to reform the boss
+      // shatter into the 14 KO-able body-part pieces; knock them ALL out to reform the boss
       this.koRemaining = 0;
       this.pieces = [];
-      for (let i = 0; i < 4; i++) {
-        const name = i % 2 === 0 ? 'hotdog' : 'nugget';
-        const piece = this.services?.spawnChild(name, this.x + rand(-80, 80), this.y - 40 - i * 30, rand(-4, 4), -rand(3, 7));
+      for (const [name, ox, oy] of ComboBoss.PIECE_LAYOUT) {
+        const piece = this.services?.spawnChild(
+          name,
+          this.x + ox * ENEMY_SCALE,
+          this.y + oy * ENEMY_SCALE,
+          rand(-3, 3),
+          rand(-5, -1),
+        );
         if (piece) {
           piece.koMode = true;
           this.koRemaining++;
@@ -2399,7 +2695,7 @@ class ComboBoss extends Boss {
   }
 
   private reform(): void {
-    if (!this.alive) return;
+    if (!this.alive || !this.broken) return;
     this.clearPieces();
     audio.play('combo_bigRoar', 0, 0.8);
     this.broken = false;
@@ -2436,14 +2732,14 @@ interface BurritoPhase {
 
 const BURRITO_PHASES: BurritoPhase[] = [
   { key: 'watermelon', minHp: 16500, idle: 'idle_watermelon', change: 'changeToWatermelon', hurt: 'water_hurt', actions: ['w_attack', 'w_jump', 'w_shoot', 'w_attack', 'w_jump', 'w_shoot'] },
-  { key: 'durian', minHp: 14500, idle: 'idle_durian', change: 'changeToDurian', hurt: 'dur_hurt', actions: ['dur_spin', 'dur_spin', 'dur_slam', 'rest'] },
-  { key: 'eggplant', minHp: 13000, idle: 'idle_eggplant', change: 'changeToEggplant', hurt: 'egg_hurt', actions: ['egg_onetwo', 'egg_onetwo', 'egg_turnpunch', 'rest'] },
-  { key: 'pumpkin', minHp: 11500, idle: 'idle_pumpkin', change: 'changeToPumpkin', hurt: 'pumpkin_hurt', actions: ['pk_flyslash', 'pk_slash', 'rest', 'pk_slash'] },
+  { key: 'durian', minHp: 14500, idle: 'idle_durian', change: 'changeToDurian', hurt: 'dur_hurt', actions: ['dur_spin', 'dur_spin', 'dur_slam', 'dur_flycrush', 'dur_flycrush', 'dur_flycrush', 'rest'] },
+  { key: 'eggplant', minHp: 13000, idle: 'idle_eggplant', change: 'changeToEggplant', hurt: 'egg_hurt', actions: ['egg_onetwo', 'egg_onetwo', 'egg_turnpunch', 'egg_rapidpunch', 'rest'] },
+  { key: 'pumpkin', minHp: 11500, idle: 'idle_pumpkin', change: 'changeToPumpkin', hurt: 'pumpkin_hurt', actions: ['pk_flyslash', 'pk_slash', 'rest', 'pk_slash', 'pk_sideblast'] },
   { key: 'sundae', minHp: 9500, idle: 'idle_sundae', change: 'changeToSundae', hurt: 'sundae_hurt', actions: ['su_throw', 'su_throw', 'su_charge'] },
   { key: 'cake', minHp: 7500, idle: 'idle_cake', change: 'changeToCake', hurt: 'cake_hurt', actions: ['ck_shoot2x2', 'ck_shoot4', 'ck_flyup', 'ck_shoot2x2', 'ck_sing'] },
-  { key: 'noodles', minHp: 5500, idle: 'idle_noodles', change: 'changeToNoodles', hurt: 'noodles_hurt', actions: ['nd_slash', 'nd_combo', 'nd_slash', 'nd_super'] },
-  { key: 'sushi', minHp: 3500, idle: 'idle_sushi', change: 'changeToSushi', hurt: 'sushi_hurt', actions: ['sh_smash', 'sh_fish', 'sh_fwdblast', 'sh_blast'] },
-  { key: 'hamburger', minHp: 3000, idle: 'idle_hamburger', change: 'changeToHamburger', hurt: 'ham_hurt', actions: ['hm_shoot360', 'hm_shoot'] },
+  { key: 'noodles', minHp: 5500, idle: 'idle_noodles', change: 'changeToNoodles', hurt: 'noodles_hurt', actions: ['nd_slash', 'nd_combo', 'nd_backflip', 'nd_slash', 'nd_combo', 'nd_super'] },
+  { key: 'sushi', minHp: 3500, idle: 'idle_sushi', change: 'changeToSushi', hurt: 'sushi_hurt', actions: ['sh_smash', 'sh_fish', 'sh_fwdblast', 'sh_blast', 'sh_fwdblast', 'sh_smash', 'sh_fish', 'sh_rapidcut'] },
+  { key: 'hamburger', minHp: 3000, idle: 'idle_hamburger', change: 'changeToHamburger', hurt: 'ham_hurt', actions: ['hm_shoot360', 'hm_shoot', 'hm_suck', 'hm_fly', 'hm_fly'] },
   { key: 'combo', minHp: -999999, idle: 'idle_combo', change: 'changeToCombo', hurt: 'combo_hurt', actions: ['cb_smash', 'cb_kick', 'cb_stomp', 'cb_nugget'] },
 ];
 
@@ -2451,7 +2747,7 @@ class BurritoBoss extends Boss {
   private phaseIndex = -1;
   private actionIndex = 0;
   private actionTimer = 0;
-  private mode: 'idle' | 'approach' | 'charge' | 'stomp' | 'flyup' | 'spin' = 'idle';
+  private mode: 'idle' | 'approach' | 'charge' | 'stomp' | 'flyup' | 'spin' | 'flycrush' | 'rapidpunch' | 'shrapid' | 'suck' | 'chew' | 'hamfly' | 'hamslam' = 'idle';
   private chargeDir = 1;
   private chargeStopAt = 0;
   private approachRange = 150;
@@ -2462,6 +2758,15 @@ class BurritoBoss extends Boss {
   private guarded = false;
   private blockedHits = 0;
   private busyChange = false;
+  /** durian fly-crush state */
+  private slamIdx = 0;
+  private flyRise = true;
+  /** eggplant rapid-punch / sushi rapid-cut timers */
+  private rapidTimer2 = 0;
+  private rapidFlip2 = 0;
+  /** hamburger-form suck */
+  private suckTimer = 0;
+  private stopSuckLoop: (() => void) | null = null;
 
   private get form(): BurritoPhase {
     return BURRITO_PHASES[Math.max(0, this.phaseIndex)];
@@ -2493,7 +2798,11 @@ class BurritoBoss extends Boss {
     this.canGoOffScreen = false;
     this.xVel = 0;
     this.yVel = 0;
+    this.stopSuckLoop?.();
+    this.stopSuckLoop = null;
     this.clearMinions();
+    // pumpkin form starts oversized at 0.75 and shrinks with damage (original specialScale)
+    this.baseScale = p.key === 'pumpkin' ? 0.75 : ENEMY_SCALE;
     audio.play('boss_killed', 0, 0.5);
     this.spriter.playAnim(p.change, p.idle, null, true, true);
     this.after(1.6, () => {
@@ -2547,7 +2856,7 @@ class BurritoBoss extends Boss {
         c.attachTo(this, offX, -170);
         c.onDestroyed = () => {
           this.candlesLeft--;
-          if (this.candlesLeft <= 0) this.guardBroken('cake_get_stunned', 'cake_stunned_idle', 'cake_recover');
+          if (this.candlesLeft <= 0) this.guardBroken('cake_get_stunned', 'cake_stunned_idle', 'cake_recover', 6); // original cake stun is 6s
         };
         this.candlesLeft++;
       }
@@ -2555,7 +2864,7 @@ class BurritoBoss extends Boss {
   }
 
   /** open the vulnerability window (durian/cake/sundae forms) */
-  private guardBroken(stunAnim: string, stunIdle: string, recoverAnim: string): void {
+  private guardBroken(stunAnim: string, stunIdle: string, recoverAnim: string, stunTime = 4.5): void {
     if (!this.alive) return;
     this.clearDelayed();
     this.mode = 'idle';
@@ -2570,7 +2879,7 @@ class BurritoBoss extends Boss {
     audio.play('durian_powerLoss', 0, 0.7);
     this.spriter.playAnim(stunAnim, stunIdle, null, true, true);
     this.actionTimer = 9999;
-    this.after(4.5, () => {
+    this.after(stunTime, () => {
       if (!this.alive || this.busyChange) return;
       this.invincible = true;
       this.canDamage = true;
@@ -2597,6 +2906,13 @@ class BurritoBoss extends Boss {
     if (this.hp > 0 && this.hp < this.form.minHp && !this.busyChange) {
       this.nextPhase();
       return;
+    }
+    if (this.form.key === 'pumpkin') {
+      // original: specialScale = 0.75 - 0.6 * (damage taken within this form / form HP pool)
+      const entryHp = BURRITO_PHASES[this.phaseIndex - 1]?.minHp ?? this.type.hp;
+      const pool = Math.max(1, entryHp - this.form.minHp);
+      const frac = Math.max(0, Math.min(1, (entryHp - this.hp) / pool));
+      this.baseScale = Math.max(0.15, 0.75 - 0.6 * frac);
     }
     if (this.spriter.currentAnimationName === this.form.idle) {
       this.spriter.playAnim(this.form.hurt, this.form.idle, null, true);
@@ -2677,6 +2993,140 @@ class BurritoBoss extends Boss {
           this.actionTimer = 1.2;
         }
         return;
+      case 'flycrush': {
+        // durian dur_flyCrush: float to the top, glide to 100/400/700, slam down — 3 times
+        if (this.flyRise) {
+          if (this.y > 40) {
+            this.yVel = Math.max(-8, this.yVel - 0.5);
+          } else {
+            this.y = 40;
+            this.yVel = 0;
+            const tx = [100, 400, 700][this.slamIdx];
+            if (Math.abs(this.x - tx) > 30) {
+              this.xVel = Math.max(-8, Math.min(8, this.xVel + 0.5 * Math.sign(tx - this.x)));
+            } else {
+              if (this.spriter.hasAnim('dur_slam')) this.spriter.playAnim('dur_slam', '', null, true);
+              this.flyRise = false;
+              this.xVel = 0;
+              this.canDamage = true;
+            }
+          }
+        } else {
+          this.yVel = Math.min(16, this.yVel + 0.5);
+          if (this.y >= GROUND_Y) {
+            this.y = GROUND_Y;
+            this.yVel = 0;
+            this.xVel = 0;
+            audio.play('durian_slam', 0, 0.7);
+            this.services?.shake(4);
+            this.slamIdx++;
+            if (this.slamIdx < 3) {
+              this.flyRise = true;
+            } else {
+              this.mode = 'idle';
+              this.flying = false;
+              this.play(this.form.idle);
+              this.actionTimer = 2; // original chooseNewActionSoon(2)
+            }
+          }
+        }
+        return;
+      }
+      case 'rapidpunch': {
+        // eggplant egg_rapidpunch: crawl forward punching, turn every 3s, random stop
+        this.xVel = 0.5 * (this.faceOverride ?? 1);
+        this.rapidTimer2 -= dt;
+        if (this.rapidTimer2 <= 0) {
+          this.rapidTimer2 = 3;
+          this.faceOverride = (this.faceOverride ?? 1) * -1;
+          const dist = Math.hypot(player.x - this.x, player.y - this.y);
+          if (Math.random() < 1 / 3 || dist > 235) {
+            this.mode = 'idle';
+            this.xVel = 0;
+            this.play(this.form.idle);
+            this.actionTimer = 1;
+          }
+        }
+        return;
+      }
+      case 'shrapid':
+        // sushi rapid-cut: invincible zigzag for 3s, flipping every 0.25s
+        this.rapidFlip2 -= dt;
+        this.rapidTimer2 -= dt;
+        if (this.rapidFlip2 <= 0) {
+          this.rapidFlip2 = 0.25;
+          this.faceOverride = (this.faceOverride ?? 1) * -1;
+          this.xVel = 4 * (this.faceOverride ?? 1);
+        }
+        if (this.rapidTimer2 <= 0) {
+          this.mode = 'idle';
+          this.invincible = this.guarded || this.swatsLeft > 0 || this.candlesLeft > 0;
+          this.canDamage = false;
+          this.xVel = 0;
+          this.play(this.form.idle);
+          this.actionTimer = 0.5;
+        }
+        return;
+      case 'suck':
+        // hamburger ham_suck: vacuum pull for 4.5s; catching the player triggers chew + spit
+        // (no heart child in the burrito remake — the boss body is the target during this form)
+        this.suckTimer -= dt;
+        this.services?.pullPlayer(this.x, this.y - 40, 0.55);
+        if (Math.abs(player.x - this.x) < 55 && Math.abs(player.y - this.y) < 80) {
+          this.endSuck();
+          this.mode = 'chew';
+          this.spriter.playAnim('ham_chew', '', () => {
+            if (!this.alive) return;
+            this.spriter.playAnim('ham_spit', this.form.idle, null, true);
+            audio.play('hamburger_spit', 0, 0.7);
+            this.after(0.8, () => {
+              // original launches the bunny (ko_fly) — minimal knockback hit stands in
+              this.services?.hurtPlayer(1, this.faceOverride ?? 1);
+              this.services?.shake(3);
+              this.mode = 'idle';
+              this.actionTimer = 2;
+            });
+          }, true);
+          audio.play('hamburger_chew', 0, 0.7);
+          this.after(0.2, () => this.services?.hurtPlayer(30, 0)); // original injureBunny(30)
+          return;
+        }
+        if (this.suckTimer <= 0) {
+          this.endSuck();
+          if (this.spriter.hasAnim('ham_suck_finished')) {
+            this.spriter.playAnim('ham_suck_finished', this.form.idle, null, true);
+          } else {
+            this.play(this.form.idle);
+          }
+          this.mode = 'idle';
+          this.actionTimer = 1.5;
+        }
+        return;
+      case 'chew':
+        this.xVel *= 0.85;
+        return;
+      case 'hamfly':
+        // ham_fly: rocket up, teleport to a random x, slam back down
+        if (this.y < -180) {
+          this.x = 100 + Math.random() * 600;
+          this.y = -40;
+          this.flying = false;
+          this.yVel = 4;
+          this.canDamage = true;
+          this.spriter.playAnim('ham_slamDown', this.form.idle, null, true);
+          this.mode = 'hamslam';
+        }
+        return;
+      case 'hamslam':
+        if (this.y >= GROUND_Y) {
+          this.mode = 'idle';
+          this.canGoOffScreen = false;
+          this.services?.shake(5);
+          audio.play('watermelon_hitGroundAfterJump', 0, 0.6);
+          this.after(0.6, () => (this.canDamage = false));
+          this.actionTimer = 1.5;
+        }
+        return;
     }
 
     this.xVel *= 0.85;
@@ -2729,7 +3179,8 @@ class BurritoBoss extends Boss {
         break;
       case 'w_shoot': {
         this.spriter.playAnim(Math.random() < 0.5 ? 'water_shoot1' : 'water_shoot2', this.form.idle, null, true);
-        for (let i = 0; i < 5; i++) this.after(0.1 + i * 0.22, () => this.aimedShot(0, 10, player));
+        // first shot at 0.07 + 0.22 = 0.29s, then +0.22s each (original water_shoot1/2)
+        for (let i = 0; i < 5; i++) this.after(0.29 + i * 0.22, () => this.aimedShot(0, 10, player));
         this.actionTimer = 1.8;
         break;
       }
@@ -2746,16 +3197,24 @@ class BurritoBoss extends Boss {
         });
         break;
       case 'dur_slam':
+        // dur_cornerSpinSlam: teleport to a corner and arc diagonally to the ground
         this.spriter.playAnim('dur_spin', '', null, true);
-        this.flying = true;
         this.canGoOffScreen = true;
         this.x = this.x < 400 ? 0 : 800;
         this.y = 0;
-        this.xVel = this.x < 400 ? 18 : -18;
+        this.xVel = this.x < 400 ? 30 : -30; // original ±30
         this.yVel = -5;
-        this.flying = false;
         this.canDamage = true;
         this.mode = 'spin';
+        break;
+      case 'dur_flycrush':
+        // dur_flyCrush: 3 hover-slams at x = 100/400/700
+        this.spriter.playAnim('dur_spin', '', null, true);
+        this.flying = true;
+        this.canDamage = true;
+        this.slamIdx = 0;
+        this.flyRise = true;
+        this.mode = 'flycrush';
         break;
       // ---- eggplant ----
       case 'egg_onetwo':
@@ -2764,6 +3223,13 @@ class BurritoBoss extends Boss {
         this.after(0.4, () => (this.xVel = 4 * dir));
         this.after(2.5, () => (this.xVel = 0));
         this.actionTimer = 3;
+        break;
+      case 'egg_rapidpunch':
+        // egg_rapidpunch: crawl-forward punch loop with the 3s turn check
+        this.spriter.playAnim('egg_pre_onetwo', 'egg_rapidpunch', null, true);
+        this.canDamage = true;
+        this.rapidTimer2 = 3;
+        this.mode = 'rapidpunch';
         break;
       case 'egg_turnpunch':
         this.spriter.playAnim('egg_pre_turnpunch', 'egg_turnpunch_idle', null, true);
@@ -2798,6 +3264,58 @@ class BurritoBoss extends Boss {
         this.canDamage = true;
         this.actionTimer = 2.6;
         break;
+      case 'pk_sideblast': {
+        // pumpkin_sideblast: vanish off-screen, re-appear at an edge, 3 SUPER_BLAST beams, return
+        this.actionTimer = 9999;
+        this.invincible = true;
+        this.canDamage = false;
+        this.canGoOffScreen = true;
+        this.flying = true;
+        const side = this.x < 400 ? -1 : 1;
+        this.x = side < 0 ? -120 : 920;
+        this.y = 100 + Math.random() * 220;
+        this.faceOverride = side < 0 ? 1 : -1;
+        this.play('pumpkin_sideblast_idle');
+        const base = this.def(3);
+        let count = 0;
+        const blast = () => {
+          if (!this.alive) return;
+          this.x = side < 0 ? 50 : 750; // edge firing position (original tween to 50/750)
+          audio.play('pumpkin_shoot3', 0, 0.7);
+          this.services?.shake(3);
+          if (base) {
+            this.services?.shoot(
+              { ...base, damageDone: 20, effectedByGravity: false, specialAIType: '', boomerang: false },
+              this.x + 40 * (this.faceOverride ?? 1), this.y - 30, this.faceOverride ?? 1, 0,
+              { beam: true, scale: 0.7 },
+            );
+          }
+          this.spriter.playAnim('pumpkin_sideblast', '', () => {
+            if (!this.alive) return;
+            count++;
+            if (count < 3) {
+              this.spriter.playAnim('pumpkin_sideblast_idle');
+              this.y = 100 + Math.random() * 220;
+              this.after(0.4, blast);
+            } else {
+              // exit off-screen, then drop back into the fight
+              this.x = side < 0 ? -120 : 920;
+              this.after(0.6, () => {
+                if (!this.alive) return;
+                this.flying = false;
+                this.canGoOffScreen = false;
+                this.invincible = false;
+                this.canDamage = true;
+                this.x = side < 0 ? 100 : 700;
+                this.play(this.form.idle);
+                this.actionTimer = 1; // original chooseNewActionSoon(1)
+              });
+            }
+          }, true);
+        };
+        this.after(0.75, blast);
+        break;
+      }
       // ---- sundae ----
       case 'su_throw':
         this.spriter.playAnim('sundae_getProjectile', '', () => {
@@ -2882,6 +3400,17 @@ class BurritoBoss extends Boss {
         this.xVel = 2 * (this.faceOverride ?? 1);
         this.actionTimer = rand(1.8, 2.5);
         break;
+      case 'nd_backflip':
+        // noodles_backflipSlash: hop backward then chain straight into a slash
+        this.actionTimer = 9999;
+        this.spriter.playAnim('noodles_backflipSlash', '', () => {
+          if (this.alive) this.execute('nd_slash_now', player);
+        }, true);
+        this.after(0.375, () => {
+          this.xVel = -4 * (this.faceOverride ?? 1);
+          this.yVel = -8;
+        });
+        break;
       case 'nd_super':
         this.spriter.playAnim('noodles_pre_superslash', '', () => {
           if (!this.alive) return;
@@ -2928,23 +3457,52 @@ class BurritoBoss extends Boss {
         this.actionTimer = 1.6;
         break;
       case 'sh_blast': {
+        // 3 upward wasabi shots, one full sushi_blast anim each (original sushi_blastOne chain),
+        // then 3 falling wasabi at 0.425s spacing
         const d = this.def(4);
-        for (let i = 0; i < 3; i++) {
-          this.after(0.2 + i * 0.45, () => {
+        this.actionTimer = 9999;
+        let count = 0;
+        const blastOne = () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('sushi_blast', '', () => {
+            if (!this.alive) return;
+            if (++count < 3) {
+              blastOne();
+            } else {
+              this.play(this.form.idle);
+              for (let i = 0; i < 3; i++) {
+                this.after(i * 0.425, () => {
+                  if (this.alive && d && this.services) this.services.shoot(d, [200, 400, 600][i], -50, [-1, 0, 1][i], 10, {});
+                });
+              }
+              this.actionTimer = 3 * 0.425 + 0.5;
+            }
+          }, true);
+          this.after(0.185, () => {
             if (!this.alive || !d || !this.services) return;
-            this.spriter.playAnim('sushi_blast', this.form.idle, null, true);
+            if (this.spriter.currentAnimationName !== 'sushi_blast') return;
             audio.play('projectileShot', 0, 0.5);
-            this.services.shoot(d, this.x, this.y - 90, [-2, 0, 2][i], -20, { scale: 0.6 });
+            this.services.shoot(d, this.x, this.y - 90, [-2, 0, 2][count], -20, { scale: 0.6 });
           });
-        }
-        for (let i = 0; i < 3; i++) {
-          this.after(1.8 + i * 0.425, () => {
-            if (this.alive && d && this.services) this.services.shoot(d, [200, 400, 600][i], -50, [-1, 0, 1][i], 10, {});
-          });
-        }
-        this.actionTimer = 3.6;
+        };
+        blastOne();
         break;
       }
+      case 'sh_rapidcut':
+        // sushi_rapidCut: 3s invincible zigzag cut (original burrito sushi_rapidCut)
+        this.actionTimer = 9999;
+        this.spriter.playAnim('sushi_pre_rapidCut', '', () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('sushi_rapidCut');
+          this.invincible = true;
+          this.canDamage = true;
+          this.rapidTimer2 = 3;
+          this.rapidFlip2 = 0.25;
+          this.xVel = 4 * (Math.sign(player.x - this.x) || 1);
+          this.faceOverride = Math.sign(this.xVel) || 1;
+          this.mode = 'shrapid';
+        }, true);
+        break;
       // ---- hamburger ----
       case 'hm_shoot360': {
         this.spriter.playAnim('ham_shoot360', this.form.idle, null, true);
@@ -2958,13 +3516,36 @@ class BurritoBoss extends Boss {
             this.services.shoot(d, this.x, this.y - 80, 10 * Math.cos(angle), 10 * Math.sin(angle), { rotation: angle });
           });
         }
-        this.actionTimer = 3.2;
+        this.actionTimer = 5.0; // original chooseNewActionSoon(5)
         break;
       }
       case 'hm_shoot':
         this.spriter.playAnim('ham_shootAtBunny', this.form.idle, null, true);
         for (let i = 0; i < 4; i++) this.after(0.2 + i * 0.1, () => this.aimedShot(1, 10, player));
         this.actionTimer = 2.5;
+        break;
+      case 'hm_suck':
+        // ham_suck: start_suck -> suck_idle -> 4.5s vacuum pull (mode 'suck')
+        this.actionTimer = 9999;
+        audio.play('hamburger_suck_start', 0, 0.7);
+        this.spriter.playAnim('ham_start_suck', '', () => {
+          if (!this.alive) return;
+          this.play('ham_suck_idle');
+          this.stopSuckLoop = audio.playLoop('hamburger_suck_loop', 0.5);
+          this.suckTimer = 4.5;
+          this.mode = 'suck';
+        }, true);
+        break;
+      case 'hm_fly':
+        // ham_fly: fly up at -15, teleport to a random x, slam down
+        this.actionTimer = 9999;
+        this.spriter.playAnim('ham_flyUp', '', null, true);
+        this.after(0.295, () => {
+          this.flying = true;
+          this.canGoOffScreen = true;
+          this.yVel = -15;
+          this.mode = 'hamfly';
+        });
         break;
       // ---- combo ----
       case 'cb_smash':
@@ -3007,8 +3588,18 @@ class BurritoBoss extends Boss {
     }
   }
 
+  private endSuck(): void {
+    this.stopSuckLoop?.();
+    this.stopSuckLoop = null;
+  }
+
+  dispose(): void {
+    this.endSuck();
+  }
+
   protected onDeath(): void {
     super.onDeath();
+    this.endSuck();
     this.clearMinions();
     audio.play('combo_die', 0, 0.8);
   }
@@ -3022,13 +3613,27 @@ class BurritoBoss extends Boss {
  * only stops when you land a hit.
  */
 class MagicManBoss extends Boss {
-  private actions = ['shoot2', 'smashDown', 'eagleSwoop', 'sideBlasts', 'staffSmash', 'rapidshot'];
+  // SOLO-CONDENSED: original duo loop is [shoot2, sideFlyToMiddle, flyThenStaffSmash,
+  // smashDown, fartAndLaugh, sideBlasts, highfiveshots, eagleSwoop]. sideFlyToMiddle
+  // (the two MMs laser-rushing each other) needs the partner and is omitted; the rest
+  // follow the original order with staffSmash standing in for flyThenStaffSmash and
+  // rapidshot for highfiveshots.
+  private actions = ['shoot2', 'staffSmash', 'smashDown', 'fartAndLaugh', 'sideBlasts', 'rapidshot', 'eagleSwoop'];
   private actionIndex = 0;
   private actionTimer = 0;
   private glide: { x: number; y: number; time: number; total: number; sx: number; sy: number; then?: () => void } | null = null;
   private swooping = false;
   private swoopCount = 0;
   private rapidFiring = false;
+  private rapidT = 0;
+  private rapidX1 = 140;
+  private rapidX2 = 340;
+  private farting = false;
+  private fartTimer = 0;
+  private fartPuff = 0;
+  private stopFartLoop: (() => void) | null = null;
+  /** teleport fade-in (original alpha 0 -> 1 over 0.25s) */
+  private fadeIn = 0;
 
   spawnAt(x: number, _y: number): void {
     Enemy.prototype.spawnAt.call(this, x, 250);
@@ -3062,6 +3667,12 @@ class MagicManBoss extends Boss {
     this.tickDelayed(dt);
     const t = this.type;
 
+    // teleport fade-in (original Tween alpha -> 1 over 0.25s)
+    if (this.fadeIn > 0) {
+      this.fadeIn -= dt;
+      this.spriter.alpha = Math.min(1, 1 - this.fadeIn / 0.25);
+    }
+
     if (this.glide) {
       const g = this.glide;
       g.time += dt;
@@ -3081,15 +3692,16 @@ class MagicManBoss extends Boss {
       this.xVel = t.maxMovementSpeed * 1.2 * dir * 1.2;
       if ((dir > 0 && this.x > 900) || (dir < 0 && this.x < -100)) {
         this.swoopCount++;
-        if (this.swoopCount >= 3) {
+        if (this.swoopCount >= 2) {
+          // two passes only (original shoot3Index)
           this.swooping = false;
           this.canDamage = false;
           this.xVel = 0;
           this.actionTimer = 0.5;
         } else {
-          // turn around for the next pass at a new height
+          // turn around for the second pass at the fixed alternate height (original y=350)
           this.faceOverride = dir * -1;
-          this.y = 200 + Math.random() * 150;
+          this.y = 350;
           this.services?.burst(this.x, this.y, 'explosion_yellow', 6);
         }
       }
@@ -3097,8 +3709,48 @@ class MagicManBoss extends Boss {
     }
 
     if (this.rapidFiring) {
-      this.xVel = Math.sin(performance.now() / 600) * 3;
-      return; // ended by onHurt or timer
+      // oscillate between the two side positions, 2s per leg (original rapidTweens)
+      this.rapidT += dt;
+      const u = (1 - Math.cos((Math.PI * this.rapidT) / 2)) / 2;
+      this.x = this.rapidX1 + (this.rapidX2 - this.rapidX1) * u;
+      this.xVel = 0;
+      return; // ended by onHurt (or the 10s safety timeout)
+    }
+
+    if (this.farting) {
+      this.fartTimer -= dt;
+      // face AWAY from the player while drifting toward them at 0.3x speed (original FARTING update)
+      const toward = Math.sign(player.x - this.x) || 1;
+      this.faceOverride = -toward;
+      const cap = t.maxMovementSpeed * 0.3;
+      this.xVel = Math.max(-cap, Math.min(cap, this.xVel + t.acceleration * toward));
+      const towardY = Math.sign(player.y - 40 - this.y) || 0;
+      this.yVel = Math.max(-cap, Math.min(cap, this.yVel + t.acceleration * 0.5 * towardY));
+      // fart cloud puffs trailing on the player side (original fartPS)
+      this.fartPuff -= dt;
+      if (this.fartPuff <= 0) {
+        this.fartPuff = 0.12;
+        this.services?.burst(this.x + rand(20, 90) * toward, this.y - 60 + rand(-40, 30), 'explosion_yellow', 2);
+      }
+      // cloud wedge collision (original checkFartCollision rays out to ±150)
+      const dx = (player.x - this.x) * toward;
+      const py = player.y - 40;
+      if (dx > -10 && dx < 165 && py > this.y - 140 && py < this.y + 20) {
+        this.endFart();
+        this.spriter.playAnim('finishFart', '', null, true);
+        // original: BUNNY_PASS_OUT then teleportSmashForward at +1s
+        this.after(1, () => {
+          if (this.alive) this.doTeleportSmash(player);
+        });
+        this.actionTimer = 9999;
+        return;
+      }
+      if (this.fartTimer <= 0) {
+        this.endFart();
+        this.play('idle');
+        this.actionTimer = 0.5;
+      }
+      return;
     }
 
     this.xVel *= 0.9;
@@ -3132,37 +3784,46 @@ class MagicManBoss extends Boss {
         break;
 
       case 'smashDown':
-        this.startGlide(player.x + (player.x < 400 ? 150 : -150), player.y - 160, 0.5, () => {
+        // original: fly beside the player at y-30 and smash IN PLACE (no drop), canDamage at +0.3s
+        this.startGlide(player.x + (player.x < 400 ? 150 : -150), player.y - 30, 0.5, () => {
           this.faceOverride = player.x < this.x ? -1 : 1;
           this.spriter.playAnim('staffSmashDown', 'idle', null, true);
+          audio.play('mm_smashdown', 0, 0.6);
           this.after(0.3, () => {
             this.canDamage = true;
-            this.yVel = 8;
-            this.flying = false;
-          });
-          this.after(0.9, () => {
-            this.flying = true;
-            this.yVel = 0;
-            this.canDamage = false;
             this.services?.shake(4);
           });
-          this.actionTimer = 1.5;
+          this.actionTimer = 1.5; // original chooseNewActionSoon(1.5)
         });
         break;
 
       case 'eagleSwoop':
-        this.startGlide(player.x < 400 ? 900 : -100, 250, 0.6, () => {
-          this.spriter.playAnim('flySideAttack', '', null, true);
-          this.swooping = true;
-          this.swoopCount = 0;
-          this.canDamage = true;
-          this.faceOverride = this.x > 400 ? -1 : 1;
-        });
+        // original startEagleSwoop: instant teleport to the boss's CURRENT side,
+        // fixed heights (pass 0: y=300, pass 1: y=350), two passes
+        this.x = this.x < 400 ? -100 : 900;
+        this.y = 300;
+        this.faceOverride = this.x < 0 ? 1 : -1;
+        this.spriter.playAnim('flySideAttack', '', null, true);
+        this.swooping = true;
+        this.swoopCount = 0;
+        this.canDamage = true;
+        break;
+
+      case 'fartAndLaugh':
+        // original fartTime: face away, drift toward the player, fart cloud for 5s
+        this.farting = true;
+        this.fartTimer = 5.1;
+        this.fartPuff = 0;
+        this.spriter.playAnim('startFart', 'fartIdle', null, true);
+        this.stopFartLoop = audio.playLoop('mm_fartloop', 0.5);
+        this.actionTimer = 9999;
         break;
 
       case 'sideBlasts': {
+        // original: SUPER_BLAST screen-wide beams (no projectiles), 3 rounds at fixed heights
         const fromLeft = player.x > 400;
-        this.startGlide(fromLeft ? -80 : 880, 100 + Math.random() * 230, 0.5, () => {
+        const heights = [100, 250, 350]; // first of each original height pair
+        this.startGlide(fromLeft ? -80 : 880, heights[0], 0.5, () => {
           this.faceOverride = fromLeft ? 1 : -1;
           let round = 0;
           const blast = () => {
@@ -3173,13 +3834,15 @@ class MagicManBoss extends Boss {
               this.services?.shake(3);
               const d = this.projectileMap?.get(0);
               if (d && this.services) {
-                for (const dy of [-20, 0, 20]) {
-                  this.services.shoot(d, this.x + 40 * (this.faceOverride ?? 1), this.y - 60 + dy, 12 * (this.faceOverride ?? 1), 0, { scale: 0.8 });
-                }
+                this.services.shoot(
+                  { ...d, damageDone: 20, effectedByGravity: false, specialAIType: '', boomerang: false },
+                  this.x + 40 * (this.faceOverride ?? 1), this.y - 60, this.faceOverride ?? 1, 0,
+                  { beam: true, scale: 0.8 },
+                );
               }
               round++;
               if (round < 3) {
-                this.after(0.5, () => this.startGlide(this.x, 100 + Math.random() * 230, 0.6, blast));
+                this.after(0.5, () => this.startGlide(this.x, heights[round], 0.6, blast));
               } else {
                 this.after(0.8, () => {
                   this.startGlide(fromLeft ? 200 : 600, 250, 0.8, () => (this.actionTimer = 1));
@@ -3193,46 +3856,87 @@ class MagicManBoss extends Boss {
       }
 
       case 'staffSmash':
-        // teleport beside the player and swing
-        this.spriter.playAnim('teleportOut', '', () => {
-          if (!this.alive) return;
-          this.x = player.x + (player.x < 400 ? 100 : -100);
-          this.y = player.y - 60;
-          this.faceOverride = player.x < this.x ? -1 : 1;
-          this.spriter.playAnim('staffSmashForward', 'idle', null, true);
-          this.after(0.45, () => {
-            if (Math.abs(player.x - this.x) < 130 && Math.abs(player.y - 40 - (this.y - 30)) < 80) {
-              this.services?.hurtPlayer(this.type.attackDmg, this.faceOverride ?? 1);
-              this.services?.shake(4);
-            }
-          });
-          this.actionTimer = 1.6;
-        }, true);
+        this.doTeleportSmash(player);
         break;
 
       default: {
-        // rapidshot: barrage until hit (or 5s)
-        this.startGlide(400, 150, 0.7, () => {
+        // rapidshot (highfiveshots): barrage at 0.3s intervals until the player lands
+        // a hit — no shot cap (10s safety timeout only)
+        const side: [number, number] = this.x < 400 ? [140, 340] : [460, 660];
+        this.startGlide(side[0], 150, 0.7, () => {
           this.spriter.playAnim('aimDownAfterHigh', 'shootDownIdle', null, true);
           this.rapidFiring = true;
-          let shots = 0;
+          this.rapidT = 0;
+          this.rapidX1 = side[0];
+          this.rapidX2 = side[1];
           const fire = () => {
             if (!this.alive || !this.rapidFiring) return;
             this.energyBall(player);
-            if (++shots < 16) this.after(0.3, fire);
-            else this.stopRapid();
+            this.after(0.3, fire);
           };
           fire();
+          this.after(10, () => this.stopRapid());
         });
       }
     }
   }
 
+  /** teleportSmashForward (original :1209-1248): alpha/scale tween-in beside the player, ray smash */
+  private doTeleportSmash(player: PlayerView): void {
+    if (!this.alive) return;
+    this.canDamage = false;
+    this.xVel = 0;
+    this.yVel = 0;
+    audio.play('teleportQuick', 0, 0.6);
+    this.x = player.x + (player.x < 400 ? 100 : -100);
+    this.y = player.y; // original: this.y = bunny.y (ground level)
+    this.faceOverride = player.x < this.x ? -1 : 1;
+    this.fadeIn = 0.25; // original alpha 0 -> 1 / scaleX 0.1 -> SCALE tween
+    this.spriter.alpha = 0;
+    this.spriter.playAnim('staffSmashForward', 'idle', null, true);
+    audio.play('mm_smashforward', 0, 0.6);
+    this.after(0.45, () => {
+      if (!this.alive) return;
+      // checkStaffCollision: two forward ray segments approximated as a wedge box
+      const fwd = this.faceOverride ?? 1;
+      const dx = (player.x - this.x) * fwd;
+      const py = player.y - 40;
+      if (dx > -40 && dx < 170 && py > this.y - 160 && py < this.y + 20) {
+        // hit: KO smash finisher, condensed solo (original bunnyKOSmash -> staffSmashDown -> doubleLaugh)
+        audio.playRandom(['punchImpact1', 'punchImpact2', 'punchImpact3'], 0, 0.7);
+        this.services?.hurtPlayer(this.type.attackDmg, fwd);
+        this.services?.shake(4);
+        this.after(0.4, () => {
+          if (!this.alive) return;
+          this.spriter.playAnim('staffSmashDown', '', () => {
+            if (this.alive) this.spriter.playAnim('laugh01', 'idle', null, true);
+          }, true);
+        });
+        this.actionTimer = 2.75; // doubleLaugh -> chooseNewActionSoon(2)
+      } else {
+        this.actionTimer = 1; // miss path (original chooseNewActionSoon(1))
+      }
+    });
+  }
+
+  private endFart(): void {
+    this.farting = false;
+    this.xVel = 0;
+    this.yVel = 0;
+    this.stopFartLoop?.();
+    this.stopFartLoop = null;
+  }
+
   private stopRapid(): void {
     if (!this.rapidFiring) return;
     this.rapidFiring = false;
-    this.spriter.playAnim('flyUpOff', 'idle', null, true);
-    this.startGlide(this.x < 400 ? 600 : 200, 250, 0.8, () => (this.actionTimer = 1));
+    this.spriter.playAnim('flyUpOff', '', null, true);
+    this.startGlide(this.x < 400 ? 600 : 200, 250, 0.8, () => {
+      // original recoverFromGround: standUp stumble before the next action
+      this.spriter.playAnim('standUp', 'idle', null, true);
+      audio.play('mm_standup', 0, 0.6);
+      this.actionTimer = 2.5;
+    });
   }
 
   protected onHurt(): void {
@@ -3243,5 +3947,14 @@ class MagicManBoss extends Boss {
     if (this.spriter.currentAnimationName === 'idle') {
       this.spriter.playAnim('hurt', 'idle', null, true);
     }
+  }
+
+  dispose(): void {
+    this.stopFartLoop?.();
+  }
+
+  protected onDeath(): void {
+    super.onDeath();
+    this.endFart();
   }
 }

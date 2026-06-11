@@ -168,10 +168,13 @@ export class WaveManager {
 
     this.segmentTimer += dt;
 
-    // spawn to keep the arena populated
+    // spawn to keep the arena populated — population counts only THIS
+    // segment's spawns (carry-overs must not block the quota's spawns:
+    // quota kills are same-segment only, so gating on total alive could
+    // deadlock a segment behind leftover enemies)
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && seg.enemies.length > 0) {
-      const alive = this.aliveCount;
+      const alive = this.enemies.filter((e) => e.alive && e.waveSegment === this.segmentIndex).length;
       const wantMore =
         alive < seg.minEnemies ||
         (alive < seg.maxEnemies && this.killsThisSegment + alive < Math.max(seg.continueAfterKills, seg.maxEnemies));
@@ -193,8 +196,8 @@ export class WaveManager {
   }
 
   /** called by the combat system when an enemy dies */
-  onKill(): void {
-    this.killsThisSegment++;
+  onKill(enemy?: Enemy): void {
+    if (!enemy || enemy.waveSegment === this.segmentIndex) this.killsThisSegment++;
     this.totalKills++;
   }
 
@@ -224,6 +227,7 @@ export class WaveManager {
     const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
     const enemy = createEnemy(type, spriter);
     enemy.services = this.services;
+    enemy.waveSegment = this.segmentIndex;
     enemy.projectileDef = this.level.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
     const [x, y] = this.spawnPosition(type.spawnType);
     enemy.spawnAt(x, y);
@@ -261,6 +265,7 @@ export class WaveManager {
     const spriter = new SpriterPlayer(`enemy-${type.name}-${this.enemies.length}`, this.sconData, this.textures);
     const enemy = createEnemy(type, spriter);
     enemy.services = this.services;
+    enemy.waveSegment = this.segmentIndex;
     enemy.projectileDef = this.level.projectiles.get(type.projectileIds[0] ?? -1) ?? null;
     enemy.spawnAt(x, y);
     enemy.y = y; // keep the launcher's altitude even for grounded types
