@@ -8,7 +8,6 @@ import type { TextureMap } from '../assets/starlingAtlas';
 import type { Enemy } from './Enemy';
 
 const STAR_SPEED = 20;
-const STAR_DAMAGE = 10;
 const ROT_SPEED = 0.4;
 
 interface Star {
@@ -19,6 +18,8 @@ interface Star {
 
 export class NinjaStars extends Container {
   onHit: ((enemy: Enemy, killed: boolean) => void) | null = null;
+  /** original BUNNY_DEFAULT_DMG_PROJECTILE = 10, +5 per AP damage level */
+  damage = 10;
 
   private textures: TextureMap;
   private stars: Star[] = [];
@@ -56,7 +57,7 @@ export class NinjaStars extends Container {
           if (!enemy.alive || enemy.invincible) continue;
           if (Math.abs(enemy.x - star.sprite.x) < 35 && Math.abs(enemy.y - 35 - star.sprite.y) < 45) {
             const before = enemy.alive;
-            enemy.hurt(STAR_DAMAGE, Math.sign(star.vx));
+            enemy.hurt(this.damage, Math.sign(star.vx));
             this.onHit?.(enemy, before && !enemy.alive);
             dead = true;
             break;

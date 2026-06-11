@@ -12,6 +12,9 @@ export interface DebugHooks {
   enemyNames(): string[];
   giveCoins(amount: number): void;
   giveStars(amount: number): void;
+  giveAp(amount: number): void;
+  triggerChest(): void;
+  triggerShopkeeper(): void;
   fullHeal(): void;
   toggleGod(): boolean;
   killAll(): void;
@@ -130,6 +133,14 @@ export class DebugPanel {
         this.button('+500c', () => this.hooks.giveCoins(500)),
         this.button('+30★', () => this.hooks.giveStars(30)),
         this.button('heal', () => this.hooks.fullHeal()),
+      ),
+    );
+    this.el.appendChild(
+      this.row(
+        this.label('economy'),
+        this.button('+1000 AP', () => this.hooks.giveAp(1000)),
+        this.button('chest', () => this.hooks.triggerChest()),
+        this.button('shop', () => this.hooks.triggerShopkeeper()),
       ),
     );
 

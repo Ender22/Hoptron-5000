@@ -44,3 +44,20 @@ WaveManager.needsChest); the rest below is still to build.
 Original per-level tables: silver 8-15, gold 6-16, goldbar 0-3, diamond at L6+ (1) and L10 (2),
 hearts shift from xs/s to l, L9-10 = full heal. Coin shower xVel rand(-4,4), yVel -10,
 0.025s stagger, sounds chest_appear/chest_open/chest_coinOut1+2.
+
+## AP meta-shop reference (mined from ShopManager.as / Store.xml — BUILT in MetaShop.ts)
+
+Fight tab (6 levels each, formulas from LevelBase 7725-7731):
+- Health Booster 200/600/1200/2000/2900/4000 AP → maxHP = 50 + 40L
+- Damage Booster 150/500/1100/1800/2600/3500 → sword 30+16L, star 10+5L
+- Sword Booster 80/300/700/1200/1800/2500 → swordLength 240+20L
+- Slash Booster 100/350/800/1500/2200/2900 → attackAgain 0.65−0.05L, attackDist 35+5L, maxAttackVel 30+5L
+
+Magic tab (orig: 4 levels = faster bubble spawns 6-8min → 1.3-2.3min; remake: −12% cooldown/level):
+- Dragon Slash 200/500/1000/1500 · Heaven's Rain 300/600/1000/1500 · Frost Winds 200/400/800/1300
+- Cursed Gold 800/1200/1600/2000 · Loot Magnet 50/150/250/400 · Giant's Rage 500/900/1300/1700
+- (remake-only prices) Sands of Time 400/800/1200/1600 · Akuma 1000/1500/2000/2500
+  (original akuma was ARENA-earned: progress 100/200/350/550/800, reward by standing 50/40/35/20/10/5)
+
+AP earn: loot/7 + points/300, floored at bank, +bossesDefeated/10 bonus. Original IAP tab skipped.
+Original bestScore-type records: SharedObject totalAwesomenessPoints / previousTotal for count-up.

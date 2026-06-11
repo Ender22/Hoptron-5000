@@ -151,6 +151,8 @@ export const SPELLS: Record<string, SpellDef> = {
 
 interface Slot {
   def: SpellDef;
+  /** spell level 1-4: each level shortens the cooldown by 12% */
+  cooldown: number;
   remaining: number;
   icon: Sprite;
   overlay: Graphics;
@@ -161,12 +163,26 @@ export class SpellSystem extends Container {
   private slots: Slot[] = [];
   private ctx: SpellContext;
   private textures: TextureMap;
+  private levels: Record<string, number> = {};
 
   constructor(ctx: SpellContext, textures: TextureMap, loadout: string[]) {
     super();
     this.ctx = ctx;
     this.textures = textures;
     this.setLoadout(loadout);
+  }
+
+  /** AP-shop spell levels (cooldown scaling); call before setLoadout */
+  setSpellLevels(levels: Record<string, number>): void {
+    this.levels = levels;
+    for (const s of this.slots) {
+      s.cooldown = this.effectiveCooldown(s.def);
+    }
+  }
+
+  private effectiveCooldown(def: SpellDef): number {
+    const level = Math.max(1, this.levels[def.id] ?? 1);
+    return def.cooldown * (1 - 0.12 * (level - 1));
   }
 
   setLoadout(ids: string[]): void {
@@ -192,7 +208,7 @@ export class SpellSystem extends Container {
       label.anchor.set(0.5);
       label.position.set(icon.x, icon.y + 33);
       this.addChild(icon, overlay, label);
-      this.slots.push({ def, remaining: 0, icon, overlay, label });
+      this.slots.push({ def, cooldown: this.effectiveCooldown(def), remaining: 0, icon, overlay, label });
     });
   }
 
@@ -200,7 +216,7 @@ export class SpellSystem extends Container {
   cast(slot: number): void {
     const s = this.slots[slot];
     if (!s || s.remaining > 0 || this.ctx.player.dead) return;
-    s.remaining = s.def.cooldown;
+    s.remaining = s.cooldown;
     s.def.cast(this.ctx);
   }
 
@@ -217,7 +233,7 @@ export class SpellSystem extends Container {
       s.overlay.clear();
       if (!ready) {
         // radial cooldown wipe
-        const frac = s.remaining / s.def.cooldown;
+        const frac = s.remaining / s.cooldown;
         s.overlay
           .moveTo(0, 0)
           .arc(0, 0, 27, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac)

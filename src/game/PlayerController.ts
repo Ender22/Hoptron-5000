@@ -10,6 +10,7 @@
 import type { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import type { Input } from './Input';
+import type { FightUpgrades } from './SaveData';
 
 // per-combo-stage swing sounds (matches original onAttackTouch/attackAgainTime)
 const SWING_SOUNDS: string[][] = [
@@ -84,6 +85,23 @@ export class PlayerController {
   maxHp = 50;
   hp = 50;
   dead = false;
+  /** original BUNNY_DEFAULT_DMG_SWORD = 30, +16 per AP damage level */
+  swordDamage = 30;
+  /** sword hit-segment scale: (240 + 20*swordLevel) / 240 */
+  swordLengthFactor = 1;
+  // ---- in-run shop stats (GameShop items, reset each run) ----
+  /** armor pool — absorbs (resisted) damage until it breaks */
+  armorHp = 0;
+  /** chi enhancer: incoming damage multiplier (1 → 0.45) */
+  dmgResistance = 1;
+  /** dodge shoes: % chance to auto-dodge a hit */
+  dodgeChance = 0;
+  /** swift armor bonuses */
+  speedBonus = 0;
+  accelBonus = 0;
+  /** invincibility potion timer (seconds) */
+  potionInvinceTimer = 0;
+  private slashLevel = 0;
   /** growth spell: visual scale + damage multiplier */
   sizeScale = 1;
   damageMultiplier = 1;
@@ -113,9 +131,49 @@ export class PlayerController {
     this.applyTransform();
   }
 
+  /** permanent AP upgrades, applied at run start (original initBunny reads SharedObject levels) */
+  applyFightUpgrades(fight: FightUpgrades): void {
+    this.maxHp = 50 + 40 * fight.hp;
+    this.swordDamage = 30 + 16 * fight.damage;
+    this.swordLengthFactor = (240 + 20 * fight.sword) / 240;
+    this.slashLevel = fight.slash;
+  }
+
+  /** reset the per-run shop stats (new run) */
+  resetRunStats(): void {
+    this.armorHp = 0;
+    this.dmgResistance = 1;
+    this.dodgeChance = 0;
+    this.speedBonus = 0;
+    this.accelBonus = 0;
+    this.potionInvinceTimer = 0;
+  }
+
   /** apply damage; returns false if it was dodged/ignored */
   hurt(amount: number, knockDir: number): boolean {
-    if (this.godMode || this.invincible || this.iframeTimer > 0 || this.dead) return false;
+    if (this.godMode || this.invincible || this.iframeTimer > 0 || this.potionInvinceTimer > 0 || this.dead) return false;
+    // dodge shoes: auto-dodge roll (original: invincible + dodge anim + slide away)
+    if (this.dodgeChance > 0 && Math.random() * 100 < this.dodgeChance) {
+      this.iframeTimer = 1.5;
+      this.xVel = 13 * knockDir;
+      this.spriter.playbackSpeed = 1;
+      this.comboStage = -1;
+      this.state = this.onGround ? 'ground' : 'air';
+      this.spriter.playAnim('dodge', this.onGround ? 'idle' : 'idle_air', null, true);
+      return false;
+    }
+    amount *= this.dmgResistance;
+    // armor absorbs the hit until the pool breaks
+    if (this.armorHp > 0) {
+      this.armorHp -= amount;
+      amount = this.armorHp < 0 ? -this.armorHp : 0;
+      if (this.armorHp < 0) this.armorHp = 0;
+      if (amount <= 0) {
+        this.iframeTimer = 0.8;
+        this.xVel = 4 * knockDir;
+        return true;
+      }
+    }
     this.hp -= amount;
     audio.play('bunny_hurt');
     this.xVel = 6 * knockDir;
@@ -153,7 +211,7 @@ export class PlayerController {
   }
 
   get hasIFrames(): boolean {
-    return this.godMode || this.invincible || this.iframeTimer > 0;
+    return this.godMode || this.invincible || this.iframeTimer > 0 || this.potionInvinceTimer > 0;
   }
 
   /** active combo stage index (-1 when not attacking) — used for per-swing hit sets */
@@ -164,6 +222,13 @@ export class PlayerController {
   /** fixed 60Hz tick; dt is always 1/60 but passed for the spriter clock */
   update(dt: number): void {
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+
+    // invincibility potion: golden pulse (original boosted brightness/saturation)
+    if (this.potionInvinceTimer > 0) {
+      this.potionInvinceTimer -= dt;
+      this.spriter.setColor(Math.sin(this.potionInvinceTimer * 18) > 0 ? 0xffe066 : 0xffffff);
+      if (this.potionInvinceTimer <= 0) this.spriter.setColor(0xffffff);
+    }
 
     // i-frame flicker after getting hit
     if (this.iframeTimer > 0) {
@@ -202,9 +267,10 @@ export class PlayerController {
     const axis = this.input.axisX;
 
     if (axis !== 0) {
-      this.xVel += ACCELERATION * axis;
-      if (this.xVel > MAX_MOVE_SPEED) this.xVel = MAX_MOVE_SPEED;
-      if (this.xVel < -MAX_MOVE_SPEED) this.xVel = -MAX_MOVE_SPEED;
+      const maxSpeed = MAX_MOVE_SPEED + this.speedBonus;
+      this.xVel += (ACCELERATION + this.accelBonus) * axis;
+      if (this.xVel > maxSpeed) this.xVel = maxSpeed;
+      if (this.xVel < -maxSpeed) this.xVel = -maxSpeed;
       this.face(Math.sign(axis));
       if (this.onGround && this.spriter.currentAnimationName !== 'Run') {
         this.spriter.playAnim('Run');
@@ -316,7 +382,8 @@ export class PlayerController {
 
   private beginComboStage(): void {
     const stage = COMBO[this.comboStage];
-    this.comboTimer = stage.chainTime;
+    // slash booster: original attack-again 0.65 - 0.05*L, applied as a chain-window factor
+    this.comboTimer = stage.chainTime * ((0.65 - 0.05 * this.slashLevel) / 0.65);
     this.attackQueued = false;
     this.xVel = stage.impulse * this.facing;
     this.spriter.playbackSpeed = stage.speed;

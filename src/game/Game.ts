@@ -9,6 +9,7 @@ import { parseScon } from '../spriter/parseScon';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
+import { Balloons } from './Balloons';
 import { Boss } from './Boss';
 import { createBoss } from './BossBehaviors';
 import { DebugPanel } from './DebugPanel';
@@ -16,10 +17,13 @@ import { Enemy, type EnemyServices } from './Enemy';
 import { EnemyProjectiles } from './EnemyProjectiles';
 import { Input } from './Input';
 import { BossShots, Hitstop, ParticleBursts, ScreenShake } from './Juice';
+import { MetaShop } from './MetaShop';
 import { NinjaStars } from './NinjaStars';
 import { Pickups } from './Pickups';
 import { GROUND_Y, PlayerController } from './PlayerController';
 import { loadSave, writeSave } from './SaveData';
+import { ScoreScreen } from './ScoreScreen';
+import { Shopkeeper, type ShopBackend, type ShopItemKey } from './Shopkeeper';
 import { SpellSystem } from './Spells';
 import { SwipeTrail } from './SwipeTrail';
 import { TitleScreen } from './TitleScreen';
@@ -31,9 +35,22 @@ const FIXED_DT = 1 / 60;
 
 const SWORD_PART = 'Bunny_Sword1';
 const SWORD_TIP_LOCAL_X = -153; // blade extends from the hilt pivot (0,0) to local (-153, 0)
-const SWORD_DAMAGE = 30; // original BUNNY_DEFAULT_DMG_SWORD
 const ENEMY_HIT_RADIUS = 42; // approximate enemy body radius at 0.55 scale
 const STARTING_STARS = 30; // one original "Ninja Star Pack"
+
+// ---- in-run shop tables (GameShop.xml + InGameShopManager effects) ----
+const ARMOR_TIERS = {
+  names: ['Thin Armor', 'Strong Armor', 'Diamond Armor', 'Swift Dragon Armor'],
+  prices: [150, 250, 350, 450],
+  pool: [50, 80, 110, 140],
+  speed: [0, 1, 2, 8],
+  accel: [0, 0.03, 0.1, 0.3],
+};
+const CHI_TIERS = { prices: [100, 300, 500, 700, 1000], resist: [0.9, 0.8, 0.7, 0.6, 0.45] };
+const HEALTH_POTION_TIERS = { names: ['Health Potion', 'Mega Health Potion'], prices: [200, 600] };
+const INVINCE_TIERS = { names: ['Invincibility Potion', 'Mega Invincibility Potion'], prices: [400, 800] };
+const LUCK_TIERS = { names: ['Lucky Robo Arm', 'Golden Lucky Robo Arm'], prices: [200, 500], mult: [1.25, 1.5] };
+const DODGE_TIERS = { names: ['Dodge Shoes', 'Super Dodge Shoes'], prices: [225, 850], chance: [15, 35] };
 
 interface LevelDef {
   bg: string;
@@ -83,10 +100,12 @@ export async function startGame(root: HTMLElement): Promise<void> {
   window.addEventListener('resize', fit);
 
   // ---- shared assets + design data ----
-  const [bunnyScon, bunnyAtlas, effectsAtlas, enemyLevels, segmentLevels] = await Promise.all([
+  const [bunnyScon, bunnyAtlas, effectsAtlas, menuAtlas, storeAtlas, enemyLevels, segmentLevels] = await Promise.all([
     fetch('assets/scml/bunny_scon.scon').then((r) => r.json()),
     loadStarlingAtlas('assets/textureAtlas/bunny/TA_Bunny-hd.xml'),
     loadStarlingAtlas('assets/textureAtlas/effects/effectAtlas-hd.xml'),
+    loadStarlingAtlas('assets/textureAtlas/menu/menuAtlas-hd.xml'),
+    loadStarlingAtlas('assets/textureAtlas/store/storeAtlas-hd.xml'),
     loadEnemyTypes(),
     loadSegments(),
   ]);
@@ -154,6 +173,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
     'combo_bigRoar', 'combo_roar1', 'combo_roar2', 'combo_roar3', 'combo_blast',
     'combo_preBreak', 'combo_down', 'combo_up', 'combo_stomp1', 'combo_stomp2', 'combo_stomp3',
     'chest_appear', 'chest_open', 'chest_coinOut1', 'chest_coinOut2', 'pickup_potion',
+    // shopkeeper + stores (Phase D)
+    'shopkeeper_welcome', 'shopkeeper_whatAreYaBuyin', 'shopkeeper_comeBack',
+    'shopkeeper_isThatAll', 'shopkeeper_thankyou', 'store_itemBought', 'store_notEnough',
+    'teleportBack', 'teleportOut', 'new_record',
   ]);
 
   // ---- run state ----
@@ -167,18 +190,55 @@ export async function startGame(root: HTMLElement): Promise<void> {
   let gameComplete = false;
   let atTitle = true;
 
+  // AP accrual (original awardLoot amount/7 + awardPoints amount/300)
+  let apFloat = 0;
+  let bossesThisLevel = 0;
+  let runKills = 0;
+
+  // in-run shop purchases (reset every run)
+  const runShop = { armor: 0, chi: 0, healthPotion: 0, invincePotion: 0, luck: 0, dodge: 0, carrotPrice: 5 };
+  let luckMult = 1;
+  let armorMax = 0;
+
+  function resetRunShop(): void {
+    runShop.armor = 0;
+    runShop.chi = 0;
+    runShop.healthPotion = 0;
+    runShop.invincePotion = 0;
+    runShop.luck = 0;
+    runShop.dodge = 0;
+    runShop.carrotPrice = 5;
+    luckMult = 1;
+    armorMax = 0;
+  }
+
+  /** floor + boss bonus, banked into the save (original storeLoadComplete) */
+  function bankAp(): number {
+    if (apFloat <= 0 && bossesThisLevel === 0) return 0;
+    let ap = Math.max(1, Math.floor(apFloat));
+    ap += Math.floor(ap * (bossesThisLevel / 10));
+    apFloat = 0;
+    bossesThisLevel = 0;
+    save.ap += ap;
+    return ap;
+  }
+
   function bankProgress(unlockNext: boolean): void {
     if (unlockNext && levelIndex + 1 < LEVELS.length) {
       save.furthestLevel = Math.max(save.furthestLevel, levelIndex + 1);
     }
     save.bestScore = Math.max(save.bestScore, score);
+    save.bestKills = Math.max(save.bestKills, runKills);
     save.totalCoins += coins;
     coins = 0;
+    bankAp();
     writeSave(save);
   }
 
   pickups.onCoins = (amount) => {
-    coins += amount;
+    const amt = Math.round(amount * luckMult); // Lucky Robo Arm
+    coins += amt;
+    apFloat += amt / 7;
     audio.play(amount >= 8 ? 'pickup_coin_gold' : 'pickup_coin_silver', 0, 0.5);
   };
   pickups.onHeal = (fraction) => {
@@ -197,10 +257,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   function onEnemyKilled(enemy: Enemy): void {
     wave?.onKill();
+    runKills++;
     score += enemy.type.pointsAward;
+    apFloat += enemy.type.pointsAward / 300;
     bursts.burst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
     pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
     if (enemy instanceof Boss) {
+      bossesThisLevel++;
       // boss death sequence: big shake + slow-mo beat + fanfare
       shake.add(12);
       bossShots.clearAll();
@@ -416,6 +479,152 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
   }
 
+  // ---- balloons (potion items from the in-run shop) ----
+  const balloons = new Balloons(effectsAtlas);
+  lootLayer.addChild(balloons);
+  balloons.onCollect = (kind, level) => {
+    if (kind === 'health') {
+      player.hp = level >= 2 ? player.maxHp : Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+    } else {
+      player.potionInvinceTimer = level >= 2 ? 20 : 10;
+    }
+  };
+
+  // ---- in-run shopkeeper (original InGameShopManager) ----
+  const shopBackend: ShopBackend = {
+    coins: () => coins,
+    name: (key) => {
+      switch (key) {
+        case 'stars': return 'Ninja Star Pack';
+        case 'armor': return ARMOR_TIERS.names[Math.min(runShop.armor, 3)];
+        case 'chi': return `Chi Enhancer ${Math.min(runShop.chi + 1, 5)}`;
+        case 'healthPotion': return HEALTH_POTION_TIERS.names[Math.min(runShop.healthPotion, 1)];
+        case 'invincePotion': return INVINCE_TIERS.names[Math.min(runShop.invincePotion, 1)];
+        case 'luck': return LUCK_TIERS.names[Math.min(runShop.luck, 1)];
+        case 'dodge': return DODGE_TIERS.names[Math.min(runShop.dodge, 1)];
+        case 'carrot': return 'Health Carrot';
+      }
+    },
+    price: (key) => {
+      switch (key) {
+        case 'stars': return 40;
+        case 'armor': return ARMOR_TIERS.prices[runShop.armor] ?? null;
+        case 'chi': return CHI_TIERS.prices[runShop.chi] ?? null;
+        case 'healthPotion': return HEALTH_POTION_TIERS.prices[runShop.healthPotion] ?? null;
+        case 'invincePotion': return INVINCE_TIERS.prices[runShop.invincePotion] ?? null;
+        case 'luck': return LUCK_TIERS.prices[runShop.luck] ?? null;
+        case 'dodge': return DODGE_TIERS.prices[runShop.dodge] ?? null;
+        case 'carrot': return runShop.carrotPrice;
+      }
+    },
+    buy: (key: ShopItemKey) => {
+      const price = shopBackend.price(key);
+      if (price === null) return 'rejected';
+      if (key === 'carrot' && player.hp >= player.maxHp) return 'rejected';
+      if (coins < price) return 'poor';
+      coins -= price;
+      switch (key) {
+        case 'stars':
+          starAmmo += 30;
+          break;
+        case 'armor': {
+          const tier = runShop.armor++;
+          player.armorHp = ARMOR_TIERS.pool[tier];
+          armorMax = ARMOR_TIERS.pool[tier];
+          player.speedBonus = ARMOR_TIERS.speed[tier];
+          player.accelBonus = ARMOR_TIERS.accel[tier];
+          break;
+        }
+        case 'chi':
+          player.dmgResistance = CHI_TIERS.resist[runShop.chi++];
+          break;
+        case 'healthPotion':
+          balloons.enable('health', ++runShop.healthPotion);
+          break;
+        case 'invincePotion':
+          balloons.enable('invince', ++runShop.invincePotion);
+          break;
+        case 'luck':
+          luckMult = LUCK_TIERS.mult[runShop.luck++];
+          break;
+        case 'dodge':
+          player.dodgeChance = DODGE_TIERS.chance[runShop.dodge++];
+          break;
+        case 'carrot':
+          player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.3);
+          runShop.carrotPrice += 5; // original: price grows 5 per carrot bought
+          break;
+      }
+      return 'ok';
+    },
+  };
+
+  let shopkeeper: Shopkeeper | null = null;
+  let shopkeeperLoading = false;
+  let shopkeeperCache: { data: ReturnType<typeof parseScon>; textures: TextureMap } | null = null;
+
+  function disposeShopkeeper(): void {
+    if (!shopkeeper) return;
+    shopkeeper.ui.parent?.removeChild(shopkeeper.ui);
+    shopkeeper.dispose();
+    shopkeeper = null;
+  }
+
+  async function spawnShopkeeper(): Promise<void> {
+    if (shopkeeperLoading || shopkeeper) return;
+    shopkeeperLoading = true;
+    try {
+      if (!shopkeeperCache) {
+        const [sconJson, textures] = await Promise.all([
+          fetch('assets/scml/shopkeeper_scon.scon').then((r) => r.json()),
+          loadStarlingAtlas('assets/textureAtlas/shopkeeper/TA_Shopkeeper-hd.xml'),
+        ]);
+        shopkeeperCache = { data: parseScon(sconJson), textures };
+      }
+      if (atTitle || !wave) return; // level changed while loading
+      const spriter = new SpriterPlayer('shopkeeper', shopkeeperCache.data, shopkeeperCache.textures);
+      shopkeeper = new Shopkeeper(spriter, menuAtlas, shopBackend, player.x);
+      shopkeeper.onClosed = () => audio.playMusic(LEVELS[levelIndex].music, 1);
+      characterLayer.addChild(spriter);
+      app.stage.addChild(shopkeeper.ui);
+      console.log('[shop] shopkeeper spawned');
+    } finally {
+      shopkeeperLoading = false;
+    }
+  }
+
+  // ---- post-level score screen + AP banking ----
+  const scoreScreen = new ScoreScreen();
+  let scoreScreenPending = false;
+
+  function showScoreScreen(): void {
+    scoreScreenPending = true;
+    const finalLevel = levelIndex + 1 >= LEVELS.length;
+    const newBest = score > 0 && score > save.bestScore;
+    const apEarned = bankAp();
+    bankProgress(true);
+    scoreScreen.show({
+      levelNumber: levelIndex + 1,
+      kills: wave?.totalKills ?? 0,
+      score,
+      apEarned,
+      newBestScore: newBest,
+      finalLevel,
+    });
+  }
+
+  scoreScreen.onContinue = () => {
+    scoreScreenPending = false;
+    if (levelIndex + 1 < LEVELS.length) {
+      levelIndex++;
+      player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
+      void loadLevel(levelIndex);
+    } else {
+      gameComplete = true;
+      audio.playMusic('afterboss', 1);
+    }
+  };
+
   // ---- level loading ----
   const sconCache = new Map<string, { data: ReturnType<typeof parseScon>; textures: TextureMap }>();
 
@@ -440,6 +649,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
     bossShots.clearAll();
     chestState = 'none';
     chest.visible = false;
+    disposeShopkeeper();
+    balloons.clearActive();
+    scoreScreen.visible = false;
 
     let cached = sconCache.get(def.scon);
     if (!cached) {
@@ -454,10 +666,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
     if (levelIndex !== n) return; // a newer load superseded this one
     enemyShots.setTextures(cached.textures);
-    // drop trailing post-boss segments (level 12's data has a leftover magicman wave)
+    // post-boss: keep marker segments (reward chest) but drop leftover enemy
+    // waves (level 12's data has a trailing magicman wave)
     const segs = segmentLevels[n];
     const bossIdx = segs.findIndex((s) => s.boss !== null);
-    const useSegs = bossIdx >= 0 ? segs.slice(0, bossIdx + 1) : segs;
+    const useSegs = bossIdx >= 0 ? segs.filter((s, i) => i <= bossIdx || s.enemies.length === 0) : segs;
     wave = new WaveManager(useSegs, typesByCategory.get(def.category)!, cached.data, cached.textures, enemyLayer, enemyServices);
     audio.playMusic(def.music, 1.5);
     levelText.text = `Level ${n + 1}`;
@@ -489,6 +702,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
     const sword = bunnySpriter.getPart(SWORD_PART);
     if (sword && player.state === 'attack') {
+      tipLocal.x = SWORD_TIP_LOCAL_X * player.swordLengthFactor; // Sword Booster reach
       const hilt = effectsLayer.toLocal(sword.toGlobal(hiltLocal));
       const tip = effectsLayer.toLocal(sword.toGlobal(tipLocal));
       swipeTrail.addSample(hilt, tip);
@@ -498,7 +712,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
         if (distToSegment(enemy.x, enemy.y - 35, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
           hitThisSwing.add(enemy);
           const wasAlive = enemy.alive;
-          enemy.hurt(SWORD_DAMAGE * player.damageMultiplier, player.facing);
+          enemy.hurt(player.swordDamage * player.damageMultiplier, player.facing);
           audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
           hitstop.freeze(0.05);
           shake.add(!enemy.alive ? 5 : 2.5);
@@ -579,6 +793,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
     const ratio = Math.max(0, player.hp / player.maxHp);
     hpBar.clear();
     hpBar.roundRect(12, 12, 150 * ratio, 12, 3).fill({ color: ratio > 0.35 ? 0x4dff6a : 0xff4d4d });
+    // armor pool (in-run shop) — thin blue bar under the health bar
+    if (player.armorHp > 0 && armorMax > 0) {
+      hpBar.roundRect(12, 26, 150 * Math.min(1, player.armorHp / armorMax), 4, 2).fill({ color: 0x5db9ff });
+    }
     scoreText.text = `Score ${score}`;
     coinText.text = String(coins);
     starText.text = String(starAmmo);
@@ -593,7 +811,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     } else if (gameComplete) {
       centerText.text = `GAME COMPLETE!\nscore ${score}  ·  T: title`;
       centerText.style.fill = 0xffe066;
-    } else if (wave?.levelComplete) {
+    } else if (wave?.levelComplete && !scoreScreen.visible) {
       centerText.text = 'LEVEL CLEAR!';
       centerText.style.fill = 0xffe066;
     } else {
@@ -621,11 +839,27 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
   }
 
-  function restart(): void {
-    bankProgress(false);
+  /** new-run reset: meta upgrades on, run-shop purchases off */
+  function startFreshRun(): void {
     score = 0;
+    runKills = 0;
+    apFloat = 0;
+    bossesThisLevel = 0;
     starAmmo = STARTING_STARS;
     gameComplete = false;
+    scoreScreenPending = false;
+    scoreScreen.visible = false;
+    resetRunShop();
+    balloons.reset();
+    player.applyFightUpgrades(save.fight);
+    player.resetRunStats();
+    stars.damage = 10 + 5 * save.fight.damage;
+    spells.setSpellLevels(save.spells);
+  }
+
+  function restart(): void {
+    bankProgress(false);
+    startFreshRun();
     player.respawn(400);
     void loadLevel(levelIndex);
   }
@@ -674,6 +908,13 @@ export async function startGame(root: HTMLElement): Promise<void> {
     giveStars: (n) => {
       starAmmo += n;
     },
+    giveAp: (n) => {
+      save.ap += n;
+      writeSave(save);
+      title.refresh(save);
+    },
+    triggerChest: () => startChest(Math.min(10, levelIndex)),
+    triggerShopkeeper: () => void spawnShopkeeper(),
     fullHeal: () => {
       player.hp = player.maxHp;
     },
@@ -726,6 +967,18 @@ export async function startGame(root: HTMLElement): Promise<void> {
     starAmmo += s;
   };
   (window as any).__speed = (s: number) => (gameSpeed = s);
+  (window as any).__chest = () => startChest(Math.min(10, levelIndex));
+  (window as any).__player = player;
+  (window as any).__balloons = balloons;
+  (window as any).__balloonNow = (kind: 'health' | 'invince' = 'health', level = 2) => {
+    balloons.enable(kind, level);
+    (balloons as any).timers[kind] = 0.1;
+  };
+  (window as any).__shop = () => void spawnShopkeeper();
+  (window as any).__ap = (n = 1000) => {
+    save.ap += n;
+    writeSave(save);
+  };
 
   // ---- title screen ----
   const title = new TitleScreen(save, LEVELS.length, effectsAtlas);
@@ -735,15 +988,27 @@ export async function startGame(root: HTMLElement): Promise<void> {
     writeSave(save);
     spells.setLoadout(loadout);
     levelIndex = lvl;
-    score = 0;
-    starAmmo = STARTING_STARS;
-    gameComplete = false;
+    startFreshRun();
     atTitle = false;
     title.visible = false;
     player.respawn(400);
     void loadLevel(levelIndex);
   };
   audio.playMusic('menu_title', 1.5);
+
+  // ---- AP meta-shop overlay (S on the title screen) ----
+  const metaShop = new MetaShop(save, storeAtlas, effectsAtlas);
+  app.stage.addChild(scoreScreen, metaShop);
+  metaShop.onChanged = () => {
+    title.locked = metaShop.visible;
+    title.refresh(save);
+  };
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyS' && atTitle && !metaShop.visible) {
+      metaShop.open();
+      title.locked = true;
+    }
+  });
 
   // ---- fixed-timestep loop ----
   let accumulator = 0;
@@ -754,12 +1019,29 @@ export async function startGame(root: HTMLElement): Promise<void> {
       input.update(FIXED_DT);
 
       if (atTitle) {
-        title.pollInput(input);
+        if (metaShop.visible) metaShop.pollInput(input);
+        else title.pollInput(input);
         input.postUpdate();
         continue;
       }
 
       if (hitstop.update(FIXED_DT)) {
+        input.postUpdate();
+        continue;
+      }
+
+      // shop browsing pauses the world (the segment itself is enemy-free)
+      if (shopkeeper?.uiOpen) {
+        shopkeeper.pollInput(input);
+        shopkeeper.update(FIXED_DT, player);
+        input.postUpdate();
+        continue;
+      }
+
+      // score tally pauses the world until the player continues
+      if (scoreScreen.visible) {
+        scoreScreen.update(FIXED_DT);
+        scoreScreen.pollInput(input);
         input.postUpdate();
         continue;
       }
@@ -774,6 +1056,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
       }
 
       player.update(FIXED_DT);
+      if (shopkeeper) {
+        shopkeeper.update(FIXED_DT, player);
+        if (shopkeeper.state === 'gone') disposeShopkeeper();
+      }
       if (wave) {
         wave.update(FIXED_DT * enemyTimeScale, player);
         if (wave.needsBoss !== null) void spawnBoss(wave.needsBoss);
@@ -781,29 +1067,24 @@ export async function startGame(root: HTMLElement): Promise<void> {
           startChest(wave.needsChest);
           wave.chestSpawned();
         }
+        if (wave.needsShopkeeper) {
+          void spawnShopkeeper();
+          wave.shopkeeperSpawned();
+        }
         combatTick();
         wave.cleanup();
         stars.update(wave.enemies);
         bossShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
         enemyShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
 
-        // level progression
-        if (wave.levelComplete && !gameComplete) {
+        // level complete → score tally (original gotoScoreScreen)
+        if (wave.levelComplete && !gameComplete && !scoreScreenPending && !player.dead) {
           levelClearTimer += FIXED_DT;
-          if (levelClearTimer > 3.5) {
-            bankProgress(true);
-            if (levelIndex + 1 < LEVELS.length) {
-              levelIndex++;
-              player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.5);
-              void loadLevel(levelIndex);
-            } else {
-              gameComplete = true;
-              audio.playMusic('afterboss', 1);
-            }
-          }
+          if (levelClearTimer > 1.6) showScoreScreen();
         }
       }
       pickups.update(FIXED_DT, player.x, player.y);
+      balloons.update(FIXED_DT, player.x, player.y, !player.dead);
       updateChest();
       swipeTrail.update(FIXED_DT);
       bursts.update(FIXED_DT);

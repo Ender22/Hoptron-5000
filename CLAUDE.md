@@ -82,11 +82,11 @@ Title (level select + pick-2-of-8 spell loadout, localStorage saves) → 11 leve
 
 Work phases in order; each phase ends with: typecheck, browser-verify, commit, update CLAUDE.md + project memory, **git push** (remote: github.com/Ender22/Hoptron-5000; repo-local identity is the personal account — never change user.email here). "Done" definition for 1.0: the original game faithfully remade (minus arena mode, plus controller combat + spell loadout), deployed to a URL friends can open.
 
-### Phase A — Debug tooling — DONE (commit cde429b)
+### Phase A — Debug tooling — DONE (commit cde429b, economy triggers added in Phase D)
 
 - [x] DebugPanel.ts: DOM overlay, backquote toggle, ?debug starts open. Level skip 1-11, jump to boss, spawn enemy by name (per-level dropdown, refreshed on level load), +500c/+30★/heal, god mode (PlayerController.godMode honored by hurt + hasIFrames), kill all (routes through kill pipeline → loot/score), reset spell cooldowns, game speed 0.25-2x (scales the fixed-step accumulator), hitbox overlay.
 - [x] Console hooks: `__spawn(name)`, `__god()`, `__give(c,s)`, `__speed(s)` added.
-- [ ] Trigger shopkeeper/chest segment on demand (once Phase D lands).
+- [x] Trigger shopkeeper/chest on demand: panel buttons (+1000 AP / chest / shop) + `__chest()`, `__shop()`, `__ap(n)`, `__balloonNow(kind, level)`, `__player`, `__balloons` console hooks.
 
 ### Phase B — Bug fixes & enemy completeness — DONE (commit 94eacfa)
 
@@ -107,13 +107,13 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] bossWarning ids RESOLVED: 0/1 per world pair; 2=burrito (lvl 11), 3=magicman (lvl 12). Final bosses are enemyTypes not <boss> elements → spawnBoss falls back to BOSS_ID_NAMES lookup. loadLevel drops post-boss leftover segments (lvl 12 data had a trailing magicman wave).
 - [ ] Fidelity follow-ups: Magic Man DUO (partner + highfive + fart + KO smash sequences), Sundae projectile slash-back (orig mechanic; both real + burrito form), Hamburger heart HP tuning, Cake candle positions (use rig points if present), Combo break thresholds quartered vs original 1000/2000-HP steps, burrito intro/death cutscenes (Phase F).
 
-### Phase D — Run economy & shops (spec mined → `notes/phase-d-spec.md` — read it first)
+### Phase D — Run economy & shops — DONE (spec: `notes/phase-d-spec.md`)
 
-- [ ] Shopkeeper segments: full spec in notes/phase-d-spec.md (items/prices/effects/anims/sounds). Player needs new stat fields: armor pool, dmgResistance, luck, dodge.
-- [x] Reward chest segments (commit 418f3b2): WaveManager.needsChest → Game chest drop/open/coin-shower, level-scaled loot. **NEEDS BROWSER VERIFY** (Chrome window was hidden when built — fast-forward level 1 w/ kill-alls to segment w/ chest; watch for the [wave] CHEST log).
-- [ ] Health/invincibility balloons + potions (original balloon mechanic).
-- [ ] Post-level score screen (kills/score/AP tally; original gotoScoreScreen) + Awesomeness Points.
-- [ ] Permanent AP meta-shop on title (ShopManager.as spec): sword dmg, max HP, slash upgrades, ninja star capacity, and SPELL UNLOCK/LEVELING (levels shorten cooldown / boost effect). Gate the 8 spells behind unlocks (currently all free) — store in SaveData.
+- [x] Shopkeeper segments (`Shopkeeper.ts`): NPC teleports in opposite the player (6s leave timer), walk-up opens Pixi shop UI (menu-atlas GameShopItem icons), full GameShop.xml catalog — stars/armor 1-4 (pool 50-140 + swift speed/accel)/chi 1-5 (resist 0.9→0.45)/potions/luck (coin mult)/dodge shoes (auto-dodge + `dodge` anim)/escalating carrot. All shopkeeper voice + store sounds wired; `shop` music while browsing (world sim paused); natural XML segments + `__shop()` debug trigger. Per-run stats reset via `resetRunShop()`/`player.resetRunStats()`.
+- [x] Reward chest segments — browser-verified (drop visual, auto-open, coin shower, loot). Post-boss slicing FIXED: loadLevel now keeps trailing enemy-less segments (post-boss chests) and only drops leftover enemy waves (lvl 12 magicman).
+- [x] Health/invincibility balloons (`Balloons.ts`): potion purchases enable spawns (10s/15s first, 90-120s reschedule on escape), drift/wobble per original, balloon+potion sprites, full/50% heal, 10/20s golden-pulse invincibility (`potionInvinceTimer` in hasIFrames).
+- [x] Post-level score screen (`ScoreScreen.ts`): kills/score/+AP count-ups, NEW RECORD + new_record sound, jump to continue (world paused). AP accrual: loot/7 + points/300, +10%/boss, banked per level AND on death/quit via bankProgress.
+- [x] AP meta-shop (`MetaShop.ts`, S on title): fight tab w/ original formulas+prices (HP 50+40L, sword dmg 30+16L / star 10+5L, sword reach 240+20L via tipLocal scale, slash chain-window 0.65−0.05L) and all 8 spells unlock/level 1-4 (−12% cooldown per level, original magic prices; time/akuma priced in-family). Spells gated on title (locked = dimmed X, legacy loadouts sanitized in loadSave). SaveData: ap/fight/spells/bestKills (+musicMuted/sfxMuted fields reserved for Phase E pause menu).
 
 ### Phase E — Game feel & polish
 
@@ -142,7 +142,7 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 
 ### Dev hooks (console, current)
 
-`__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`, `__spawn('strawberry')`, `__god()`, `__give(coins, stars)`, `__speed(0.25-2)`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma. Debug panel: backquote or `?debug`.
+`__gotoLevel(n)` (1-based), `__bossNow()`, `__equip('akuma','time')`, `__spawn('strawberry')`, `__god()`, `__give(coins, stars)`, `__speed(0.25-2)`, `__chest()`, `__shop()`, `__ap(n)`, `__balloonNow('health'|'invince', 1|2)`, `__player`, `__balloons`. Spells: freeze/ninjaRain/slash/growth/coin/magnet/time/akuma. Debug panel: backquote or `?debug`.
 
 ## Working style & session tidbits
 

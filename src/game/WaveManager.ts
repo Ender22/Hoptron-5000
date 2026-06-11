@@ -53,10 +53,16 @@ export class WaveManager {
   needsBoss: number | null = null;
   /** chest level waiting for the Game layer to spawn (original rewardChest) */
   needsChest: number | null = null;
+  /** shopkeeper segment reached — Game layer spawns the NPC */
+  needsShopkeeper = false;
   private activeBoss: Enemy | null = null;
 
   chestSpawned(): void {
     this.needsChest = null;
+  }
+
+  shopkeeperSpawned(): void {
+    this.needsShopkeeper = false;
   }
 
   private nextSegment(): void {
@@ -84,9 +90,18 @@ export class WaveManager {
         console.log(`[wave] segment ${this.segmentIndex}: CHEST level ${seg.rewardChest}`);
         return;
       }
-      // skip special segments not implemented yet
-      if (seg.shopkeeper || seg.enemies.length === 0) {
-        console.log(`[wave] skipping special segment ${this.segmentIndex}`, { shopkeeper: seg.shopkeeper });
+      // shopkeeper: timed segment (continueAfterTime 7); the shop itself runs
+      // concurrently and can outlive the segment (original behavior)
+      if (seg.shopkeeper) {
+        this.current = seg;
+        this.delayTimer = seg.delay;
+        this.needsShopkeeper = true;
+        console.log(`[wave] segment ${this.segmentIndex}: SHOPKEEPER`);
+        return;
+      }
+      // skip degenerate segments (no enemies, no marker, no timer)
+      if (seg.enemies.length === 0 && seg.continueAfterTime <= 0) {
+        console.log(`[wave] skipping empty segment ${this.segmentIndex}`);
         this.segmentIndex++;
         continue;
       }

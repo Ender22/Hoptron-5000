@@ -14,6 +14,9 @@ const SPELL_ORDER = ['freeze', 'ninjaRain', 'slash', 'growth', 'coin', 'magnet',
 export class TitleScreen extends Container {
   onStart: ((levelIndex: number, loadout: string[]) => void) | null = null;
 
+  /** suppress all title input while an overlay (AP shop) is open */
+  locked = false;
+
   selectedLevel = 0;
   loadout: string[];
 
@@ -33,7 +36,7 @@ export class TitleScreen extends Container {
     this.build(effectsAtlas);
 
     this.keyHandler = (e) => {
-      if (!this.visible) return;
+      if (!this.visible || this.locked) return;
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.changeLevel(-1);
       if (e.code === 'ArrowRight' || e.code === 'KeyD') this.changeLevel(1);
       if (/^Digit[1-8]$/.test(e.code)) {
@@ -46,7 +49,7 @@ export class TitleScreen extends Container {
 
   /** poll gamepad nav each frame while visible */
   pollInput(input: Input): void {
-    if (!this.visible) return;
+    if (!this.visible || this.locked) return;
     if (input.justPressed('left')) this.changeLevel(-1);
     if (input.justPressed('right')) this.changeLevel(1);
     if (input.justPressed('jump') || input.justPressed('pause')) this.start();
@@ -119,7 +122,7 @@ export class TitleScreen extends Container {
     });
 
     const startHint = new Text({
-      text: 'ENTER / SPACE / (A) to start  ·  in game: move ←→  jump SPACE  attack J  dash K  throw L  spells Q/E',
+      text: 'ENTER / SPACE / (A) to start  ·  S: AP shop  ·  move ←→  jump SPACE  attack J  dash K  throw L  spells Q/E',
       style: { fontFamily: 'Verdana', fontSize: 12, fill: 0xdddddd },
     });
     startHint.anchor.set(0.5);
@@ -143,6 +146,7 @@ export class TitleScreen extends Container {
   }
 
   private toggleSpell(id: string): void {
+    if ((this.save.spells[id] ?? 0) < 1) return; // locked — unlock in the AP shop
     if (this.loadout.includes(id)) {
       if (this.loadout.length > 1) this.loadout = this.loadout.filter((s) => s !== id);
     } else {
@@ -161,12 +165,18 @@ export class TitleScreen extends Container {
     const left = this.selectedLevel > 0 ? '◀ ' : '   ';
     const right = this.selectedLevel < max ? ' ▶' : '   ';
     this.levelLabel.text = `${left}Level ${this.selectedLevel + 1}${right}   (unlocked: ${max + 1})`;
-    this.statsLabel.text = `best score ${this.save.bestScore}  ·  coins banked ${this.save.totalCoins}`;
+    this.statsLabel.text = `best score ${this.save.bestScore}  ·  coins banked ${this.save.totalCoins}  ·  ${this.save.ap} AP`;
     for (const icon of this.spellIcons) {
+      const unlocked = (this.save.spells[icon.id] ?? 0) >= 1;
       const picked = this.loadout.includes(icon.id);
-      icon.sprite.alpha = picked ? 1 : 0.35;
+      icon.sprite.alpha = !unlocked ? 0.12 : picked ? 1 : 0.35;
       icon.ring.clear();
-      if (picked) icon.ring.circle(0, 0, 34).stroke({ color: 0xffe066, width: 3 });
+      if (!unlocked) {
+        icon.ring.circle(0, 0, 30).stroke({ color: 0x555555, width: 2 });
+        icon.ring.moveTo(-21, -21).lineTo(21, 21).stroke({ color: 0x555555, width: 2 });
+      } else if (picked) {
+        icon.ring.circle(0, 0, 34).stroke({ color: 0xffe066, width: 3 });
+      }
     }
   }
 
