@@ -14,7 +14,7 @@ const TIERS: [number, number][] = [
 ];
 
 export class ComboMeter extends Container {
-  private count = 0;
+  private streak = 0;
   private timer = 0;
   private text: Text;
   private bar: Graphics;
@@ -32,38 +32,42 @@ export class ComboMeter extends Container {
     this.addChild(this.text, this.bar);
   }
 
+  get count(): number {
+    return this.streak;
+  }
+
   get multiplier(): number {
     for (const [kills, mult] of TIERS) {
-      if (this.count >= kills) return mult;
+      if (this.streak >= kills) return mult;
     }
     return 1;
   }
 
   onKill(): void {
-    this.count++;
+    this.streak++;
     this.timer = WINDOW;
     this.pop = 1;
   }
 
   /** player got hit — the streak breaks */
   reset(): void {
-    this.count = 0;
+    this.streak = 0;
     this.timer = 0;
   }
 
   update(dt: number): void {
     if (this.timer > 0) {
       this.timer -= dt;
-      if (this.timer <= 0) this.count = 0;
+      if (this.timer <= 0) this.streak = 0;
     }
     this.pop = Math.max(0, this.pop - dt * 4);
 
-    const show = this.count >= 2;
+    const show = this.streak >= 2;
     this.text.visible = this.bar.visible = show;
     if (!show) return;
 
     const mult = this.multiplier;
-    this.text.text = mult > 1 ? `${this.count} COMBO  x${mult}` : `${this.count} COMBO`;
+    this.text.text = mult > 1 ? `${this.streak} COMBO  x${mult}` : `${this.streak} COMBO`;
     this.text.style.fill = mult >= 3 ? 0xff5d5d : mult >= 2 ? 0xffa94d : mult > 1 ? 0xffe066 : 0xffffff;
     this.text.scale.set(1 + this.pop * 0.25);
 

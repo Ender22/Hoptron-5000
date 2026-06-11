@@ -3,17 +3,19 @@
  * ninja stars, and full combat. Fixed 60Hz simulation (the original's
  * per-frame constants depend on it), rendering at display rate.
  */
-import { Application, Assets, Container, Graphics, Point, Sprite, Text, Texture } from 'pixi.js';
+import { Application, Assets, BlurFilter, Container, Graphics, Point, Sprite, Text, Texture } from 'pixi.js';
 import { loadStarlingAtlas, type TextureMap } from '../assets/starlingAtlas';
 import { parseScon } from '../spriter/parseScon';
 import { SpriterPlayer } from '../spriter/SpriterPlayer';
 import { audio } from './Audio';
 import { loadEnemyTypes, loadSegments, type LevelEnemies } from './data/levelData';
+import { AchievementSystem, loadAchievements } from './Achievements';
 import { Balloons } from './Balloons';
 import { Boss } from './Boss';
 import { createBoss } from './BossBehaviors';
 import { ComboMeter } from './ComboMeter';
 import { DebugPanel } from './DebugPanel';
+import { DialogueScene, loadScenes, type SceneDef } from './DialogueScene';
 import { Enemy, type EnemyServices } from './Enemy';
 import { EnemyProjectiles } from './EnemyProjectiles';
 import { Input } from './Input';
@@ -103,7 +105,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
   window.addEventListener('resize', fit);
 
   // ---- shared assets + design data ----
-  const [bunnyScon, bunnyAtlas, effectsAtlas, menuAtlas, storeAtlas, enemyLevels, segmentLevels] = await Promise.all([
+  const [bunnyScon, bunnyAtlas, effectsAtlas, menuAtlas, storeAtlas, enemyLevels, segmentLevels, achievementDefs] = await Promise.all([
     fetch('assets/scml/bunny_scon.scon').then((r) => r.json()),
     loadStarlingAtlas('assets/textureAtlas/bunny/TA_Bunny-hd.xml'),
     loadStarlingAtlas('assets/textureAtlas/effects/effectAtlas-hd.xml'),
@@ -111,7 +113,9 @@ export async function startGame(root: HTMLElement): Promise<void> {
     loadStarlingAtlas('assets/textureAtlas/store/storeAtlas-hd.xml'),
     loadEnemyTypes(),
     loadSegments(),
+    loadAchievements(),
   ]);
+  const sceneScript = await loadScenes();
   const typesByCategory = new Map<string, LevelEnemies>(enemyLevels.map((l) => [l.foodCategory, l]));
 
   // ---- display tree ----
@@ -188,8 +192,15 @@ export async function startGame(root: HTMLElement): Promise<void> {
     // shopkeeper + stores (Phase D)
     'shopkeeper_welcome', 'shopkeeper_whatAreYaBuyin', 'shopkeeper_comeBack',
     'shopkeeper_isThatAll', 'shopkeeper_thankyou', 'store_itemBought', 'store_notEnough',
-    'teleportBack', 'teleportOut', 'new_record',
+    'teleportBack', 'teleportOut', 'new_record', 'achievement_complete', 'slam', 'splat2',
   ]);
+  // dialogue scene voices + blips live in the scenes folder
+  audio.loadFx(
+    ['bunny_letter', 'mm_letter', 'bunny_talk_speedup', 'mm_talk_speedup', 'mm_laugh01', 'mm_laugh02',
+     'Fart1', 'Fart2', 'Fart4', 'TheMasterFart', 'gotBurrito', 'sadloop', 'romanticloop', 'deathfart',
+     'tvCutTone', 'dikbot_revealed'],
+    'assets/sounds/scenes/',
+  );
 
   // ---- run state ----
   const save = loadSave();
@@ -247,10 +258,33 @@ export async function startGame(root: HTMLElement): Promise<void> {
     writeSave(save);
   }
 
+  // ---- achievements (Achievements.xml; progress lives in the save object) ----
+  const ach = new AchievementSystem(achievementDefs, save.achievements);
+  ach.onReward = (ap) => {
+    save.ap += ap;
+    writeSave(save);
+  };
+  // per-life / per-run achievement counters
+  let killsThisLife = 0;
+  let noDamageKills = 0;
+  let starKillsRun = 0;
+  let coinsRun = 0;
+  let levelsNoDeath = 0;
+  let killsThisSwing = 0;
+  let bossNoDamage = false;
+  let bossSwordUsed = false;
+  let prevDead = false;
+
   pickups.onCoins = (amount) => {
     const amt = Math.round(amount * luckMult); // Lucky Robo Arm
     coins += amt;
     apFloat += amt / 7;
+    coinsRun += amt;
+    ach.bump('010', amt);
+    ach.bump('023', amt);
+    ach.best('007', coinsRun);
+    ach.best('020', coinsRun);
+    ach.best('035', coinsRun);
     audio.play(amount >= 8 ? 'pickup_coin_gold' : 'pickup_coin_silver', 0, 0.5);
   };
   pickups.onHeal = (fraction) => {
@@ -297,8 +331,16 @@ export async function startGame(root: HTMLElement): Promise<void> {
   }
   stars.onHit = (enemy, killed) => {
     audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
-    if (killed) onEnemyKilled(enemy);
+    if (killed) {
+      starKillsRun++;
+      ach.bump('009');
+      ach.bump('022');
+      ach.best('012', starKillsRun);
+      ach.best('025', starKillsRun);
+      onEnemyKilled(enemy);
+    }
   };
+  player.onDodge = () => ach.bump('037');
 
   /** pex def when we have one, code burst otherwise */
   function doBurst(x: number, y: number, name: string, count: number): void {
@@ -315,8 +357,32 @@ export async function startGame(root: HTMLElement): Promise<void> {
     apFloat += points / 300;
     doBurst(enemy.x, enemy.y, enemy.type.deathPS, enemy instanceof Boss ? 42 : 16);
     pickups.dropFrom(enemy.x, enemy.y, enemy.type.loot);
+
+    // achievement counters
+    killsThisLife++;
+    noDamageKills++;
+    ach.bump('001');
+    ach.bump('014');
+    ach.best('003', noDamageKills);
+    ach.best('016', noDamageKills);
+    ach.best('030', noDamageKills);
+    ach.best('041', noDamageKills);
+    ach.best('005', killsThisLife);
+    ach.best('018', killsThisLife);
+    ach.best('031', killsThisLife);
+    ach.best('040', killsThisLife);
+    ach.best('006', comboMeter.count);
+    ach.best('019', comboMeter.count);
+    ach.best('034', comboMeter.count);
+    ach.best('011', score);
+    ach.best('024', score);
+    ach.best('036', score);
+    ach.best('046', score);
+
     if (enemy instanceof Boss) {
       bossesThisLevel++;
+      if (bossNoDamage) ach.unlock('026');
+      if (!bossSwordUsed) ach.unlock('029');
       // boss death sequence: big shake + slow-mo beat + fanfare
       shake.add(12);
       bossShots.clearAll();
@@ -451,6 +517,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
       boss.spawnAt(620, type.effectedByGravity ? 0 : 160); // drops in / flies in
       enemyLayer.addChild(spriter);
       wave.bossSpawned(boss);
+      bossNoDamage = true; // achievement 026: cleared if the player gets hit
+      bossSwordUsed = false; // achievement 029: boss killed by stars only
       audio.playMusic(bossId === 3 ? 'track_07' : bossId === 2 ? 'bosstrack_01' : levelIndex % 2 === 0 ? 'bosstrack_01' : 'bosstrack_02', 1);
       console.log(`[boss] ${type.name} spawned (hp ${type.hp})`);
     } finally {
@@ -586,6 +654,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
           armorMax = ARMOR_TIERS.pool[tier];
           player.speedBonus = ARMOR_TIERS.speed[tier];
           player.accelBonus = ARMOR_TIERS.accel[tier];
+          if (tier === 2) ach.unlock('039'); // Suited Up: Diamond Armor
           break;
         }
         case 'chi':
@@ -646,12 +715,38 @@ export async function startGame(root: HTMLElement): Promise<void> {
     }
   }
 
+  // ---- between-level dialogue scenes (original SceneManager flow) ----
+  const dialogue = new DialogueScene();
+  dialogue.onBlur = (blurred) => {
+    world.filters = blurred ? [new BlurFilter({ strength: 4 })] : [];
+  };
+  let sceneShown = false;
+
+  /** original initSceneManager: first clear = story scene, repeats = extra scenes */
+  function pickScene(): SceneDef | null {
+    if (levelIndex >= 10) return null; // final-zone scene chain not ported yet
+    if (save.furthestSceneReached < levelIndex) {
+      save.furthestSceneReached = levelIndex;
+      writeSave(save);
+      return sceneScript.main[levelIndex] ?? null;
+    }
+    if (sceneScript.extra.length === 0) return null;
+    const scene = sceneScript.extra[save.extraSceneReached % sceneScript.extra.length];
+    save.extraSceneReached = (save.extraSceneReached + 1) % sceneScript.extra.length;
+    writeSave(save);
+    return scene;
+  }
+
   // ---- post-level score screen + AP banking ----
   const scoreScreen = new ScoreScreen();
   let scoreScreenPending = false;
+  dialogue.onFinished = () => showScoreScreen();
 
   function showScoreScreen(): void {
     scoreScreenPending = true;
+    levelsNoDeath++;
+    if (levelsNoDeath >= 3) ach.unlock('032');
+    if (levelsNoDeath >= 4) ach.unlock('044');
     const finalLevel = levelIndex + 1 >= LEVELS.length;
     const newBest = score > 0 && score > save.bestScore;
     const apEarned = bankAp();
@@ -705,6 +800,8 @@ export async function startGame(root: HTMLElement): Promise<void> {
     disposeShopkeeper();
     balloons.clearActive();
     scoreScreen.visible = false;
+    dialogue.cancel();
+    sceneShown = false;
     pex.clear();
 
     let cached = sconCache.get(def.scon);
@@ -754,7 +851,10 @@ export async function startGame(root: HTMLElement): Promise<void> {
     const stage = player.state === 'attack' ? player.comboStageIndex : player.state === 'plunge' ? 9 : -1;
     if (stage !== lastComboStage) {
       lastComboStage = stage;
-      if (stage >= 0) hitThisSwing.clear();
+      if (stage >= 0) {
+        hitThisSwing.clear();
+        killsThisSwing = 0;
+      }
     }
 
     const sword = bunnySpriter.getPart(SWORD_PART);
@@ -769,11 +869,18 @@ export async function startGame(root: HTMLElement): Promise<void> {
         if (distToSegment(enemy.x, enemy.y - 35, hilt.x, hilt.y, tip.x, tip.y) < ENEMY_HIT_RADIUS) {
           hitThisSwing.add(enemy);
           const wasAlive = enemy.alive;
+          if (enemy instanceof Boss) bossSwordUsed = true;
           enemy.hurt(player.swordDamage * player.damageMultiplier, player.facing);
           audio.playRandom(['enemyHurt_01', 'enemyHurt_02', 'enemyHurt_03']);
           hitstop.freeze(0.05);
           shake.add(!enemy.alive ? 5 : 2.5);
-          if (wasAlive && !enemy.alive) onEnemyKilled(enemy);
+          if (wasAlive && !enemy.alive) {
+            onEnemyKilled(enemy);
+            killsThisSwing++;
+            if (killsThisSwing >= 5) ach.unlock('002');
+            if (killsThisSwing >= 7) ach.unlock('015');
+            if (killsThisSwing >= 9) ach.unlock('028');
+          }
         }
       }
     } else {
@@ -938,6 +1045,11 @@ export async function startGame(root: HTMLElement): Promise<void> {
     scoreScreen.visible = false;
     resetRunShop();
     balloons.reset();
+    killsThisLife = 0;
+    noDamageKills = 0;
+    starKillsRun = 0;
+    coinsRun = 0;
+    levelsNoDeath = 0;
     player.applyFightUpgrades(save.fight);
     player.resetRunStats();
     stars.damage = 10 + 5 * save.fight.damage;
@@ -1092,7 +1204,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
 
   // ---- AP meta-shop overlay (S on the title screen) ----
   const metaShop = new MetaShop(save, storeAtlas, effectsAtlas);
-  app.stage.addChild(scoreScreen, pauseMenu, metaShop);
+  app.stage.addChild(dialogue, scoreScreen, pauseMenu, metaShop, ach);
   metaShop.onChanged = () => {
     title.locked = metaShop.visible;
     title.refresh(save);
@@ -1111,6 +1223,7 @@ export async function startGame(root: HTMLElement): Promise<void> {
     while (accumulator >= FIXED_DT) {
       accumulator -= FIXED_DT;
       input.update(FIXED_DT);
+      ach.update(FIXED_DT); // toasts animate in every state
 
       if (atTitle) {
         if (metaShop.visible) metaShop.pollInput(input);
@@ -1128,6 +1241,14 @@ export async function startGame(root: HTMLElement): Promise<void> {
       if (shopkeeper?.uiOpen) {
         shopkeeper.pollInput(input);
         shopkeeper.update(FIXED_DT, player);
+        input.postUpdate();
+        continue;
+      }
+
+      // dialogue scene: world freezes, scene drives input
+      if (dialogue.active) {
+        dialogue.update(FIXED_DT);
+        dialogue.pollInput(input);
         input.postUpdate();
         continue;
       }
@@ -1161,8 +1282,20 @@ export async function startGame(root: HTMLElement): Promise<void> {
       }
 
       player.update(FIXED_DT);
-      if (player.hp < prevPlayerHp) comboMeter.reset(); // taking a hit breaks the streak
+      if (player.hp < prevPlayerHp) {
+        comboMeter.reset(); // taking a hit breaks the streak
+        noDamageKills = 0;
+        bossNoDamage = false;
+      }
       prevPlayerHp = player.hp;
+      if (player.dead && !prevDead) {
+        killsThisLife = 0;
+        noDamageKills = 0;
+        levelsNoDeath = 0;
+        save.deaths++;
+        writeSave(save);
+      }
+      prevDead = player.dead;
       updateCountdown();
       if (shopkeeper) {
         shopkeeper.update(FIXED_DT, player);
@@ -1185,10 +1318,15 @@ export async function startGame(root: HTMLElement): Promise<void> {
         bossShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
         enemyShots.update(FIXED_DT * enemyTimeScale, player.x, player.y, !player.dead && !player.hasIFrames);
 
-        // level complete → score tally (original gotoScoreScreen)
-        if (wave.levelComplete && !gameComplete && !scoreScreenPending && !player.dead) {
+        // level complete → story scene (first clear) or extra gag, then the tally
+        if (wave.levelComplete && !gameComplete && !scoreScreenPending && !player.dead && !sceneShown) {
           levelClearTimer += FIXED_DT;
-          if (levelClearTimer > 1.6) showScoreScreen();
+          if (levelClearTimer > 1.6) {
+            sceneShown = true;
+            const scene = pickScene();
+            if (scene) void dialogue.play(scene, save.deaths);
+            else showScoreScreen();
+          }
         }
       }
       pickups.update(FIXED_DT, player.x, player.y);

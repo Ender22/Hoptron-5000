@@ -19,6 +19,13 @@ export interface SaveData {
   fight: FightUpgrades;
   /** spell id -> level (0/absent = locked, 1-4; levels shorten cooldown) */
   spells: Record<string, number>;
+  /** achievement id -> progress value (done when >= endValue) */
+  achievements: Record<string, number>;
+  /** total deaths (the Magic Man mocks you with this in the scenes) */
+  deaths: number;
+  /** story-scene progress (original furthestSceneReached / extraSceneReached) */
+  furthestSceneReached: number;
+  extraSceneReached: number;
   musicMuted: boolean;
   sfxMuted: boolean;
 }
@@ -36,6 +43,10 @@ function defaults(): SaveData {
     ap: 0,
     fight: { hp: 0, damage: 0, sword: 0, slash: 0 },
     spells: { ...DEFAULT_SPELLS },
+    achievements: {},
+    deaths: 0,
+    furthestSceneReached: -1,
+    extraSceneReached: 0,
     musicMuted: false,
     sfxMuted: false,
   };
@@ -67,6 +78,10 @@ export function loadSave(): SaveData {
           slash: Number(fight.slash) || 0,
         },
         spells,
+        achievements: typeof data.achievements === 'object' && data.achievements ? data.achievements : {},
+        deaths: Number(data.deaths) || 0,
+        furthestSceneReached: Number.isFinite(Number(data.furthestSceneReached)) ? Number(data.furthestSceneReached) : -1,
+        extraSceneReached: Number(data.extraSceneReached) || 0,
         musicMuted: !!data.musicMuted,
         sfxMuted: !!data.sfxMuted,
       };

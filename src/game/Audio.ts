@@ -36,11 +36,30 @@ class AudioManager {
   }
 
   /** preload a list of fx names (no extension), matching MGC.loadLotsOfSounds */
-  loadFx(names: string[]): void {
+  loadFx(names: string[], path = FX_PATH): void {
     for (const name of names) {
       if (this.sfx.has(name)) continue;
-      this.sfx.set(name, new Howl({ src: [`${FX_PATH}${name}.mp3`], preload: true }));
+      this.sfx.set(name, new Howl({ src: [`${path}${name}.mp3`], preload: true }));
     }
+  }
+
+  /** loop a preloaded fx as music (scene mood loops live in the scenes folder) */
+  playFxAsMusic(name: string): void {
+    this.stopMusic(0.8);
+    if (this.muted || this._musicMuted) return;
+    const howl = this.sfx.get(name);
+    if (!howl) return;
+    const id = howl.play();
+    howl.loop(true, id);
+    howl.volume(this.musicVolume, id);
+    this.fxMusicStop = () => howl.stop(id);
+  }
+
+  private fxMusicStop: (() => void) | null = null;
+
+  stopFxMusic(): void {
+    this.fxMusicStop?.();
+    this.fxMusicStop = null;
   }
 
   play(name: string, delaySec = 0, volume = 1): void {

@@ -128,6 +128,8 @@ export class PlayerController {
   onThrow: ((x: number, y: number, dir: number) => void) | null = null;
   /** fired when a plunge attack hits the ground (AoE + shockwave in Game) */
   onPlungeLand: ((x: number, y: number) => void) | null = null;
+  /** fired when the dodge shoes auto-dodge a hit (achievement 037) */
+  onDodge: (() => void) | null = null;
 
   constructor(spriter: SpriterPlayer, input: Input) {
     this.spriter = spriter;
@@ -167,6 +169,7 @@ export class PlayerController {
       this.comboStage = -1;
       this.state = this.onGround ? 'ground' : 'air';
       this.spriter.playAnim('dodge', this.onGround ? 'idle' : 'idle_air', null, true);
+      this.onDodge?.();
       return false;
     }
     amount *= this.dmgResistance;

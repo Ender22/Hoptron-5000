@@ -124,12 +124,12 @@ Work phases in order; each phase ends with: typecheck, browser-verify, commit, u
 - [x] 3-2-1 countdown at level start (countDown textures, scale-pop+fade, ~0.62 scale — source PNGs are huge); wave updates gated until done. Level text banner kept. Loading tips SKIPPED (loads are instant in dev; revisit at Phase G if the prod bundle is slow).
 - [ ] Tuning pass with user (NEEDS DEVIN): 30-apple opening swarm cap?, spell cooldowns, trail color verdict, dash trail VFX, hit sparks on enemy contact, plunge feel (damage/radius/fall speed), combo tier thresholds, countdown size/feel, shop prices vs coin income.
 
-### Phase F — Story & meta content
+### Phase F — Story & meta content (spec mined → `notes/phase-f-spec.md` — read it first)
 
-- [ ] SCML XML parser (dikbot_scml.scml, ending_magicman.scml are old XML format; parser mirrors parseScon — original SpriterXML.as is the spec).
-- [ ] Cutscene/dialogue system: port SceneManager.as reading assets/xml/Scenes.xml (Magic Man story beats between levels, talk icons + speech bubbles, scene mp3s in sounds/scenes/). Skippable.
-- [ ] Intro sequence (introbunny/intro_magicman scons, intro narration) — skippable; ending + credits (Credits.xml, ending music).
-- [ ] Achievements (assets/xml/Achievements.xml + toast UI; original AchievementHolder).
+- [x] Cutscene/dialogue system (`DialogueScene.ts`): condensed SceneManager port playing `public/data/Scenes.xml` — MAIN scene after first clear of levels 1-10 / EXTRA gag scenes on replays (original furthestSceneReached/extraSceneReached selection, persisted in save), typewriter @0.015s/letter w/ bunny_letter/mm_letter blips + tap-speedup sounds, talk icons + BigTalkBG9 bubbles (standalone PNGs in textures/), voice/sound/music actions (scene loops via audio.playFxAsMusic), delay/continueTime, cus_var deaths (save.deaths), disableContinuePress (unskippable farts), BlurFilter on world. Esc skips. Flow: boss death → scene → score screen. NOT ported (follow-ups): MM/bunny stage actors + their anim actions, burrito/cake/StealUpgrades trigger sequences, final-zone scene chain (levels 11-12), DikBot reveal.
+- [x] Achievements (`Achievements.ts`): all 46 from Achievements.xml, progress in save.achievements, AP rewards on unlock, toast banner + achievement_complete sound. Tracked: total/streak/life kills, kills-per-slash (5/7/9), combo counts, score tiers, coins run+total, star kills, dodge count, Diamond Armor equip, 3/4 levels-no-death, boss-no-damage (026), boss-stars-only (029). Dormant (need per-boss hooks): 004/008/013/017/021/027/033/038/042/043/045.
+- [ ] SCML XML parser (dikbot_scml.scml, ending_magicman.scml; original SpriterXML.as is the spec) — needed for DikBot reveal + ending.
+- [ ] Intro sequence (intro1-3.jpg + introSubs.xml subtitle player + narration, timeline in notes/phase-f-spec.md); ending + credits (Credits.xml scroller spec mined).
 - [ ] Tutorial, simplified for keyboard/controller (TutorialXML.xml as inspiration).
 - [ ] Boss Rush mode (BossModeSegments.xml + BossModeEnemies.xml + heart_scon HP display) — stretch goal.
 
